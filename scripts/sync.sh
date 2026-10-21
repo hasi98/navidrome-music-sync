@@ -32,6 +32,12 @@ while IFS= read -r url; do
     [ -z "$url" ] && continue
     [[ "$url" =~ ^#.* ]] && continue
 
+    # Strip dynamic radio mixes to prevent infinite/500-song loops
+    if [[ "$url" =~ "list=RD" ]]; then
+        echo "Stripping dynamic radio mix parameters from: $url" >> "$LOG_FILE"
+        url=$(echo "$url" | sed 's/[?&]list=RD[^&]*//g' | sed 's/[?&]start_radio=[^&]*//g')
+    fi
+
     echo "Syncing: $url" >> "$LOG_FILE"
 
     # Download with yt-dlp using low CPU & disk priority

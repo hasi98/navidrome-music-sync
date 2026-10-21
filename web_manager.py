@@ -37,6 +37,60 @@ def trigger_sync_async():
         return True
     return False
 
+def run_single_download(url):
+    global is_syncing
+    with sync_lock:
+        is_syncing = True
+        try:
+            # Strip radio mix and extraneous playlist parameters from single track downloads
+            clean_url = re.sub(r"[?&]list=RD[^&]*", "", url)
+            clean_url = re.sub(r"[?&]start_radio=[^&]*", "", clean_url)
+            
+            cookie_arg = []
+            if os.path.exists(COOKIES_FILE) and os.path.getsize(COOKIES_FILE) > 10:
+                cookie_arg = ["--cookies", COOKIES_FILE]
+            
+            cmd = [
+                "nice", "-n", "19", "ionice", "-c", "3",
+                "/usr/local/bin/yt-dlp",
+                *cookie_arg,
+                "--extract-audio",
+                "--audio-format", "mp3",
+                "--audio-quality", "0",
+                "--embed-thumbnail",
+                "--embed-metadata",
+                "--add-metadata",
+                "--download-archive", os.path.join(MUSIC_DIR, "download_archive.txt"),
+                "--output", f"{MUSIC_DIR}/library/%(uploader,creator,artist)s/%(playlist,album)s/%(title)s.%(ext)s",
+                "--ignore-errors",
+                "--no-abort-on-error",
+                "--no-overwrites",
+                "--no-post-overwrites",
+                clean_url
+            ]
+            
+            with open(LOG_FILE, "a", encoding="utf-8") as f:
+                now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                f.write(f"\n==========================================\nDownloading single track: {clean_url}\nStarted at: {now_str}\n")
+                f.flush()
+                subprocess.run(cmd, stdout=f, stderr=f, check=False)
+                subprocess.run(["chmod", "-R", "775", f"{MUSIC_DIR}/library"], check=False)
+                end_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                f.write(f"Single track download finished at: {end_str}\n==========================================\n")
+        except Exception as e:
+            with open(LOG_FILE, "a", encoding="utf-8") as f:
+                f.write(f"Error during single download: {e}\n")
+        finally:
+            is_syncing = False
+
+def trigger_single_download_async(url):
+    global is_syncing
+    if not is_syncing:
+        t = threading.Thread(target=run_single_download, args=(url,), daemon=True)
+        t.start()
+        return True
+    return False
+
 def stop_sync_process():
     global is_syncing
     try:
@@ -906,15 +960,24 @@ def api_status():
 def add():
     url = request.form.get("url", "").strip()
     sync_now = request.form.get("sync_now") == "true"
+    is_playlist = "list=PL" in url or "list=OL" in url or "list=UU" in url
+    
     if url:
-        playlists = get_playlists()
-        if url not in playlists:
-            playlists.append(url)
-            save_playlists(playlists)
-        if sync_now:
-            trigger_sync_async()
+        if is_playlist:
+            # Persistent playlist: save in playlists.txt and run sync
+            playlists = get_playlists()
+            if url not in playlists:
+                playlists.append(url)
+                save_playlists(playlists)
+            if sync_now:
+                trigger_sync_async()
+        else:
+            # Single track from search or direct URL: download immediately without re-checking old playlists!
+            if sync_now:
+                trigger_single_download_async(url)
+                
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
-        return jsonify({"status": "ok", "url": url})
+        return jsonify({"status": "ok", "url": url, "is_playlist": is_playlist})
     return redirect(url_for("index"))
 
 @app.route("/cookies", methods=["POST"])
