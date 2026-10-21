@@ -62,7 +62,7 @@ def get_recent_logs(lines_count=35):
     except Exception as e:
         return f"Error reading log file: {e}"
 
-def search_youtube(query, limit=10):
+def search_youtube(query, limit=35):
     if not query.strip():
         return []
 
@@ -324,12 +324,36 @@ HTML_TEMPLATE = """
                 </div>
             </div>
 
-            <!-- Search Results Display -->
-            <div id="searchResults" class="space-y-2.5">
-                <div class="p-8 text-center text-slate-500 text-xs italic glass-panel rounded-2xl border-dashed">
-                    <i class="fa-solid fa-music text-slate-600 text-2xl mb-2 block"></i>
-                    Search above to download any song or album in 320kbps MP3
+            <!-- Dedicated Search Results Box Section -->
+            <div id="searchResultsSection" class="hidden glass-panel p-4 rounded-2xl space-y-3 border border-slate-700/80 shadow-2xl">
+                <div class="flex items-center justify-between pb-2.5 border-b border-slate-800">
+                    <div class="flex items-center space-x-2 min-w-0">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Results</span>
+                        <span id="resultsCountBadge" class="px-2 py-0.5 text-2xs rounded-full font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20">0</span>
+                    </div>
+                    <button onclick="clearSearch()" class="touch-action-btn text-2xs text-slate-400 hover:text-rose-400 flex items-center space-x-1 p-1 transition">
+                        <i class="fa-solid fa-xmark"></i>
+                        <span>Dismiss</span>
+                    </button>
                 </div>
+
+                <!-- Scrollable Box Container -->
+                <div id="searchResultsList" class="space-y-2.5 max-h-[460px] overflow-y-auto pr-1"></div>
+
+                <!-- Load More Button -->
+                <div id="loadMoreContainer" class="pt-2 hidden border-t border-slate-800/80">
+                    <button onclick="loadMoreResults()" id="loadMoreBtn"
+                        class="touch-action-btn w-full py-2.5 px-4 bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/60 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center space-x-2 transition shadow">
+                        <i class="fa-solid fa-angles-down text-rose-400"></i>
+                        <span id="loadMoreBtnText">Load More Results</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Empty Search Prompt -->
+            <div id="searchPlaceholder" class="p-8 text-center text-slate-500 text-xs italic glass-panel rounded-2xl border-dashed">
+                <i class="fa-solid fa-music text-slate-600 text-2xl mb-2 block"></i>
+                Search above to download any song or album in 320kbps MP3
             </div>
         </section>
 
@@ -531,22 +555,80 @@ HTML_TEMPLATE = """
             }, 3000);
         }
 
-        // Search Engine
+        // Search Engine & Pagination State
+        let allSearchResults = [];
+        let displayedCount = 0;
+        const BATCH_SIZE = 8;
+
+        function renderBatch() {
+            const list = document.getElementById('searchResultsList');
+            const loadMoreContainer = document.getElementById('loadMoreContainer');
+            const loadMoreBtnText = document.getElementById('loadMoreBtnText');
+            const badge = document.getElementById('resultsCountBadge');
+
+            const nextBatch = allSearchResults.slice(displayedCount, displayedCount + BATCH_SIZE);
+            displayedCount += nextBatch.length;
+
+            const html = nextBatch.map(item => `
+                <div class="glass-panel p-2.5 rounded-2xl flex items-center justify-between space-x-3 hover:border-slate-700 transition">
+                    <div class="relative w-20 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-950 border border-slate-800">
+                        <img src="${item.thumbnail}" alt="" class="w-full h-full object-cover">
+                        ${item.duration ? `<span class="absolute bottom-1 right-1 bg-black/80 text-white text-3xs px-1.5 py-0.2 rounded font-mono font-medium">${item.duration}</span>` : ''}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="text-xs font-semibold text-slate-100 line-clamp-1 leading-snug">${item.title}</h3>
+                        <p class="text-2xs text-slate-400 truncate mt-0.5 flex items-center gap-1">
+                            <span>${item.channel}</span>
+                            ${item.type === 'playlist' ? '<span class="text-indigo-400 font-semibold">• Playlist</span>' : ''}
+                        </p>
+                    </div>
+                    <button onclick="downloadTrack('${item.url}', this)"
+                        class="touch-action-btn px-3 py-2 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-semibold text-2xs rounded-xl shadow-md transition shrink-0 flex items-center space-x-1">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Download</span>
+                    </button>
+                </div>
+            `).join('');
+
+            list.insertAdjacentHTML('beforeend', html);
+            badge.innerText = `${displayedCount} of ${allSearchResults.length}`;
+
+            if (displayedCount < allSearchResults.length) {
+                loadMoreContainer.classList.remove('hidden');
+                loadMoreBtnText.innerText = `Load More (+${Math.min(BATCH_SIZE, allSearchResults.length - displayedCount)})`;
+            } else {
+                loadMoreContainer.classList.add('hidden');
+            }
+        }
+
+        function loadMoreResults() {
+            renderBatch();
+        }
+
         async function doSearch() {
             const input = document.getElementById('searchInput');
             const query = input.value.trim();
             if (!query) return;
 
             const btn = document.getElementById('searchBtn');
-            const container = document.getElementById('searchResults');
             const clearBtn = document.getElementById('clearSearchBtn');
+            const section = document.getElementById('searchResultsSection');
+            const placeholder = document.getElementById('searchPlaceholder');
+            const list = document.getElementById('searchResultsList');
+            const loadMoreContainer = document.getElementById('loadMoreContainer');
+            const badge = document.getElementById('resultsCountBadge');
 
             clearBtn.classList.remove('hidden');
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             btn.disabled = true;
 
-            container.innerHTML = `
-                <div class="p-8 text-center text-slate-400 text-xs glass-panel rounded-2xl">
+            placeholder.classList.add('hidden');
+            section.classList.remove('hidden');
+            loadMoreContainer.classList.add('hidden');
+            badge.innerText = 'Searching...';
+
+            list.innerHTML = `
+                <div class="p-8 text-center text-slate-400 text-xs">
                     <i class="fa-solid fa-spinner fa-spin text-rose-500 text-xl mb-2 block"></i>
                     Searching YouTube for "${query}"...
                 </div>
@@ -557,38 +639,24 @@ HTML_TEMPLATE = """
                 const data = await res.json();
 
                 if (!data.results || data.results.length === 0) {
-                    container.innerHTML = `
-                        <div class="p-8 text-center text-slate-400 text-xs glass-panel rounded-2xl">
+                    list.innerHTML = `
+                        <div class="p-8 text-center text-slate-400 text-xs">
                             <i class="fa-solid fa-face-frown text-slate-500 text-xl mb-2 block"></i>
                             No results found for "${query}". Try another search term.
                         </div>
                     `;
+                    badge.innerText = '0';
                     return;
                 }
 
-                container.innerHTML = data.results.map(item => `
-                    <div class="glass-panel p-2.5 rounded-2xl flex items-center justify-between space-x-3 hover:border-slate-700 transition">
-                        <div class="relative w-20 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-950 border border-slate-800">
-                            <img src="${item.thumbnail}" alt="" class="w-full h-full object-cover">
-                            ${item.duration ? `<span class="absolute bottom-1 right-1 bg-black/80 text-white text-3xs px-1.5 py-0.2 rounded font-mono font-medium">${item.duration}</span>` : ''}
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <h3 class="text-xs font-semibold text-slate-100 line-clamp-1 leading-snug">${item.title}</h3>
-                            <p class="text-2xs text-slate-400 truncate mt-0.5 flex items-center gap-1">
-                                <span>${item.channel}</span>
-                                ${item.type === 'playlist' ? '<span class="text-indigo-400 font-semibold">• Playlist</span>' : ''}
-                            </p>
-                        </div>
-                        <button onclick="downloadTrack('${item.url}', this)"
-                            class="touch-action-btn px-3 py-2 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-semibold text-2xs rounded-xl shadow-md transition shrink-0 flex items-center space-x-1">
-                            <i class="fa-solid fa-download"></i>
-                            <span>Download</span>
-                        </button>
-                    </div>
-                `).join('');
+                allSearchResults = data.results;
+                displayedCount = 0;
+                list.innerHTML = '';
+                renderBatch();
 
             } catch (err) {
-                container.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs glass-panel rounded-2xl">Search error: ${err.message}</div>`;
+                list.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs">Search error: ${err.message}</div>`;
+                badge.innerText = 'Error';
             } finally {
                 btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i><span>Find</span>';
                 btn.disabled = false;
@@ -603,12 +671,10 @@ HTML_TEMPLATE = """
         function clearSearch() {
             document.getElementById('searchInput').value = '';
             document.getElementById('clearSearchBtn').classList.add('hidden');
-            document.getElementById('searchResults').innerHTML = `
-                <div class="p-8 text-center text-slate-500 text-xs italic glass-panel rounded-2xl border-dashed">
-                    <i class="fa-solid fa-music text-slate-600 text-2xl mb-2 block"></i>
-                    Search above to download any song or album in 320kbps MP3
-                </div>
-            `;
+            document.getElementById('searchResultsSection').classList.add('hidden');
+            document.getElementById('searchPlaceholder').classList.remove('hidden');
+            allSearchResults = [];
+            displayedCount = 0;
         }
 
         // Direct Download Action
