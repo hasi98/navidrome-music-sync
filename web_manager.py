@@ -5,6 +5,7 @@ import urllib.request
 import urllib.parse
 import json
 import re
+import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, jsonify
 
 app = Flask(__name__)
@@ -35,6 +36,20 @@ def trigger_sync_async():
         t.start()
         return True
     return False
+
+def stop_sync_process():
+    global is_syncing
+    try:
+        subprocess.run(["pkill", "-9", "-f", "yt-dlp"], check=False)
+        subprocess.run(["pkill", "-9", "-f", "sync.sh"], check=False)
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"\n==========================================\n[CANCELLED] Download process stopped by user via Web UI at {now_str}\n==========================================\n")
+    except Exception as e:
+        print("Error stopping sync:", e)
+    finally:
+        is_syncing = False
+    return True
 
 def get_playlists():
     if not os.path.exists(PLAYLISTS_FILE):
@@ -252,6 +267,12 @@ HTML_TEMPLATE = """
                     {% if is_syncing %}Syncing...{% else %}Ready{% endif %}
                 </span>
 
+                <!-- Stop Download Button (Visible when downloading) -->
+                <button onclick="stopDownload()" id="headerStopBtn" class="{% if not is_syncing %}hidden{% endif %} touch-action-btn px-2.5 py-1.5 bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/50 rounded-xl text-2xs font-bold transition flex items-center space-x-1 animate-pulse" title="Cancel active download">
+                    <i class="fa-solid fa-stop text-3xs"></i>
+                    <span>Stop</span>
+                </button>
+
                 <!-- Open Navidrome Link -->
                 <a href="http://{{ host }}:4533" target="_blank"
                     class="touch-action-btn px-3 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold rounded-xl shadow-md flex items-center space-x-1.5 transition">
@@ -399,11 +420,18 @@ HTML_TEMPLATE = """
                         <h2 class="text-sm font-semibold text-slate-200">Tracked Sources</h2>
                     </div>
 
-                    <button onclick="triggerFullSync()" id="syncAllBtn"
-                        class="touch-action-btn px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 rounded-xl text-2xs font-semibold transition flex items-center space-x-1.5">
-                        <i class="fa-solid fa-rotate" id="syncAllIcon"></i>
-                        <span>Sync All Now</span>
-                    </button>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="stopDownload()" id="tabStopBtn"
+                            class="{% if not is_syncing %}hidden{% endif %} touch-action-btn px-2.5 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 rounded-xl text-2xs font-semibold transition flex items-center space-x-1.5 animate-pulse">
+                            <i class="fa-solid fa-stop text-3xs"></i>
+                            <span>Stop Sync</span>
+                        </button>
+                        <button onclick="triggerFullSync()" id="syncAllBtn"
+                            class="touch-action-btn px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 rounded-xl text-2xs font-semibold transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-rotate" id="syncAllIcon"></i>
+                            <span>Sync All Now</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div id="playlistsList" class="divide-y divide-slate-800/80 max-h-80 overflow-y-auto pr-1">
@@ -496,6 +524,11 @@ HTML_TEMPLATE = """
                     </div>
 
                     <div class="flex items-center space-x-2">
+                        <button onclick="stopDownload()" id="logsStopBtn"
+                            class="{% if not is_syncing %}hidden{% endif %} touch-action-btn px-2 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 rounded-lg text-2xs font-semibold transition flex items-center space-x-1 animate-pulse">
+                            <i class="fa-solid fa-stop text-3xs"></i>
+                            <span>Cancel</span>
+                        </button>
                         <label class="flex items-center space-x-1.5 text-2xs text-slate-400 cursor-pointer">
                             <input type="checkbox" id="autoRefreshLogs" checked class="rounded border-slate-700 text-rose-500 focus:ring-0">
                             <span>Auto</span>
@@ -753,10 +786,37 @@ HTML_TEMPLATE = """
             }, 2000);
         }
 
+        // Stop/Abort Download Action
+        async function stopDownload() {
+            if (!confirm("Are you sure you want to stop the active download?")) return;
+            try {
+                const res = await fetch('/api/stop', { method: 'POST' });
+                const data = await res.json();
+                showToast("Download cancelled successfully.");
+                updateStatusBadge(false);
+                if (typeof fetchLogs === 'function') fetchLogs();
+            } catch (err) {
+                showToast("Failed to stop download", true);
+            }
+        }
+
         // Status updater
         function updateStatusBadge(syncing) {
             const badge = document.getElementById('headerSyncBadge');
             const mobilePill = document.getElementById('mobileStatusPill');
+            const stopBtns = [
+                document.getElementById('headerStopBtn'),
+                document.getElementById('tabStopBtn'),
+                document.getElementById('logsStopBtn')
+            ];
+
+            stopBtns.forEach(btn => {
+                if (btn) {
+                    if (syncing) btn.classList.remove('hidden');
+                    else btn.classList.add('hidden');
+                }
+            });
+
             if (syncing) {
                 if (badge) {
                     badge.className = "hidden sm:inline-block px-2 py-0.5 text-2xs rounded-full font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse";
@@ -884,6 +944,16 @@ def delete():
 @app.route("/sync", methods=["POST"])
 def sync():
     trigger_sync_async()
+    return redirect(url_for("index"))
+
+@app.route("/api/stop", methods=["POST"])
+def api_stop():
+    stop_sync_process()
+    return jsonify({"status": "stopped", "is_syncing": False})
+
+@app.route("/stop", methods=["POST"])
+def stop():
+    stop_sync_process()
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
