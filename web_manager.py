@@ -73,10 +73,13 @@ def run_single_download(url):
                 now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 f.write(f"\n==========================================\nDownloading single track: {clean_url}\nStarted at: {now_str}\n")
                 f.flush()
-                subprocess.run(cmd, stdout=f, stderr=f, check=False)
+                res = subprocess.run(cmd, stdout=f, stderr=f, check=False)
                 subprocess.run(["chmod", "-R", "775", f"{MUSIC_DIR}/library"], check=False)
                 end_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                f.write(f"Single track download finished at: {end_str}\n==========================================\n")
+                if res.returncode == 0:
+                    f.write(f"✓ Single track downloaded successfully at: {end_str}\n==========================================\n")
+                else:
+                    f.write(f"❌ Download failed (code {res.returncode}) at: {end_str}\nCheck above logs. If 'Sign in to confirm you are not a bot' appears, update cookies in Auth tab.\n==========================================\n")
         except Exception as e:
             with open(LOG_FILE, "a", encoding="utf-8") as f:
                 f.write(f"Error during single download: {e}\n")
@@ -119,7 +122,14 @@ def save_playlists(playlists):
             f.write(f"{p}\n")
 
 def has_cookies():
-    return os.path.exists(COOKIES_FILE) and os.path.getsize(COOKIES_FILE) > 10
+    if not (os.path.exists(COOKIES_FILE) and os.path.getsize(COOKIES_FILE) > 10):
+        return False
+    try:
+        with open(COOKIES_FILE, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+            return "LOGIN_INFO" in content or "SAPISID" in content
+    except Exception:
+        return False
 
 def get_recent_logs(lines_count=35):
     if not os.path.exists(LOG_FILE):
