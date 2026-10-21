@@ -1,0 +1,8 @@
+[Unit]
+Description=YouTube Music yt-dlp Sync Service
+After=network.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/music/scripts/sync.sh

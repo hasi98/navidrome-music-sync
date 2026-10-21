@@ -1,0 +1,34 @@
+# Credentials & Secrets
+cookies.txt
+*.key
+*.pem
+*.pub
+.env
+*.secret
+
+# Logs & History
+*.log
+logs/
+download_archive.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Music & Media files (keep repo code-only)
+library/
+*.mp3
+*.m4a
+*.opus
+*.flac
+*.wav
+
+# OS / Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

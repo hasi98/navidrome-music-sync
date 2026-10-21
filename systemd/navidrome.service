@@ -1,0 +1,17 @@
+[Unit]
+Description=Navidrome Music Server and Streamer
+After=remote-fs.target network.target
+AssertPathExists=/var/lib/navidrome
+
+[Service]
+Type=simple
+User=navidrome
+Group=navidrome
+WorkingDirectory=/var/lib/navidrome
+ExecStart=/opt/navidrome/navidrome --configfile "/var/lib/navidrome/navidrome.toml"
+Restart=always
+RestartSec=5
+MemoryMax=250M
+
+[Install]
+WantedBy=multi-user.target

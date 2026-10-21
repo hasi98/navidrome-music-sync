@@ -1,0 +1,7 @@
+MusicFolder = "/home/ubuntu/music/library"
+DataFolder = "/var/lib/navidrome"
+Port = 4533
+Address = "0.0.0.0"
+ScanInterval = "15m"
+SessionTimeout = "72h"
+LogLevel = "info"

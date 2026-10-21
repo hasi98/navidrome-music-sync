@@ -1,0 +1,14 @@
+[Unit]
+Description=Music Web Sync Manager
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/music
+ExecStart=/home/ubuntu/music/venv/bin/python /home/ubuntu/music/web_manager.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
