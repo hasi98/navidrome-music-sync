@@ -28,6 +28,14 @@ def run_sync_thread():
         finally:
             is_syncing = False
 
+def trigger_sync_async():
+    global is_syncing
+    if not is_syncing:
+        t = threading.Thread(target=run_sync_thread, daemon=True)
+        t.start()
+        return True
+    return False
+
 def get_playlists():
     if not os.path.exists(PLAYLISTS_FILE):
         return []
@@ -44,16 +52,26 @@ def save_playlists(playlists):
 def has_cookies():
     return os.path.exists(COOKIES_FILE) and os.path.getsize(COOKIES_FILE) > 10
 
-def search_youtube(query, limit=8):
+def get_recent_logs(lines_count=35):
+    if not os.path.exists(LOG_FILE):
+        return "No logs generated yet. Add a track to begin downloading."
+    try:
+        with open(LOG_FILE, "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+            return "".join(lines[-lines_count:]) if lines else "Log file is currently empty."
+    except Exception as e:
+        return f"Error reading log file: {e}"
+
+def search_youtube(query, limit=10):
     if not query.strip():
         return []
     url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}"
     req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
         "Accept-Language": "en-US,en;q=0.9"
     })
     try:
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with urllib.request.urlopen(req, timeout=6) as response:
             html = response.read().decode('utf-8')
     except Exception as e:
         print("Search error:", e)
@@ -120,258 +138,574 @@ def search_youtube(query, limit=8):
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Downloader & Sync</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#090d16">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Navidrome Music Sync</title>
+    
+    <!-- Tailwind CSS & Icons -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fdf2f8',
+                            500: '#ec4899',
+                            600: '#db2777',
+                            accent: '#6366f1'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #0b1120; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .touch-action-btn:active {
+            transform: scale(0.96);
+        }
     </style>
 </head>
-<body class="min-h-screen p-3 md:p-8 flex flex-col items-center">
-    <div class="w-full max-w-2xl space-y-5">
+<body class="min-h-screen pb-20 md:pb-8 flex flex-col items-center antialiased selection:bg-rose-500 selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toastBox" class="fixed top-4 z-50 left-1/2 -translate-x-1/2 w-11/12 max-w-sm pointer-events-none transition-all duration-300 opacity-0 -translate-y-4"></div>
+
+    <div class="w-full max-w-xl px-3 sm:px-4 py-3 sm:py-6 space-y-4">
         
-        <!-- Header -->
-        <div class="flex items-center justify-between bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 shadow-lg backdrop-blur">
+        <!-- Top App Bar -->
+        <header class="glass-panel p-3.5 sm:p-4 rounded-2xl shadow-xl flex items-center justify-between sticky top-2 z-40">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500 to-amber-500 flex items-center justify-center text-white text-xl shadow-md">
-                    <i class="fa-brands fa-youtube"></i>
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500 via-pink-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow-lg shadow-rose-500/20">
+                    <i class="fa-solid fa-compact-disc animate-[spin_10s_linear_infinite]"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight">Music Sync Manager</h1>
-                    <p class="text-xs text-slate-400">Search, Download & Sync to Navidrome</p>
+                    <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
+                        <span>TubeSync</span>
+                        <span id="headerSyncBadge" class="hidden sm:inline-block px-2 py-0.5 text-2xs rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            {% if is_syncing %}⚡ Syncing{% else %}● Ready{% endif %}
+                        </span>
+                    </h1>
+                    <p class="text-2xs sm:text-xs text-slate-400">Navidrome Cloud Music</p>
                 </div>
             </div>
-            <a href="http://{{ host }}:4533" target="_blank" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold rounded-xl flex items-center space-x-1.5 transition shadow">
-                <i class="fa-solid fa-music"></i>
-                <span>Open Player</span>
-            </a>
-        </div>
 
-        <!-- Search YouTube Box -->
-        <div class="bg-gradient-to-b from-slate-800/90 to-slate-800/60 p-5 rounded-2xl border border-slate-700/80 shadow-xl space-y-4">
-            <div class="flex items-center justify-between">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300 flex items-center space-x-2">
-                    <i class="fa-solid fa-magnifying-glass text-rose-500"></i>
-                    <span>Search YouTube Directly</span>
-                </h2>
-                <span class="text-2xs text-slate-400">No URL copying needed</span>
+            <div class="flex items-center space-x-2">
+                <!-- Status Pill (Mobile) -->
+                <span id="mobileStatusPill" class="sm:hidden px-2 py-1 text-2xs rounded-full font-medium {% if is_syncing %}bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse{% else %}bg-emerald-500/20 text-emerald-400 border border-emerald-500/30{% endif %}">
+                    {% if is_syncing %}Syncing...{% else %}Ready{% endif %}
+                </span>
+
+                <!-- Open Navidrome Link -->
+                <a href="http://{{ host }}:4533" target="_blank"
+                    class="touch-action-btn px-3 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold rounded-xl shadow-md flex items-center space-x-1.5 transition">
+                    <i class="fa-solid fa-headphones"></i>
+                    <span class="hidden xs:inline">Player</span>
+                </a>
             </div>
+        </header>
 
-            <div class="flex space-x-2">
-                <input type="text" id="searchInput" placeholder="Search by song name, artist, or album..."
-                    class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-rose-500 transition text-slate-100 placeholder-slate-500"
-                    onkeydown="if(event.key==='Enter') doSearch()">
-                <button onclick="doSearch()" id="searchBtn"
-                    class="px-5 py-3 bg-rose-600 hover:bg-rose-500 font-semibold text-xs rounded-xl shadow-md transition shrink-0 flex items-center space-x-2">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <span>Search</span>
-                </button>
-            </div>
+        <!-- Navigation Tabs (Mobile Segmented Control) -->
+        <nav class="glass-panel p-1.5 rounded-2xl flex items-center justify-between text-xs font-medium space-x-1">
+            <button onclick="switchTab('search')" id="tabBtn-search" class="tab-btn flex-1 py-2 px-2 rounded-xl text-center transition flex items-center justify-center space-x-1.5 bg-rose-600 text-white shadow-sm font-semibold">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <span>Search</span>
+            </button>
+            <button onclick="switchTab('direct')" id="tabBtn-direct" class="tab-btn flex-1 py-2 px-2 rounded-xl text-center transition flex items-center justify-center space-x-1.5 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-link"></i>
+                <span class="hidden xs:inline">Link</span>
+            </button>
+            <button onclick="switchTab('playlists')" id="tabBtn-playlists" class="tab-btn flex-1 py-2 px-2 rounded-xl text-center transition flex items-center justify-center space-x-1.5 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-list-ul"></i>
+                <span class="hidden xs:inline">Library</span>
+                <span id="plCountBadge" class="ml-0.5 px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-full text-2xs font-mono">{{ playlists|length }}</span>
+            </button>
+            <button onclick="switchTab('cookies')" id="tabBtn-cookies" class="tab-btn flex-1 py-2 px-2 rounded-xl text-center transition flex items-center justify-center space-x-1.5 text-slate-400 hover:text-slate-200 relative">
+                <i class="fa-solid fa-cookie-bite"></i>
+                <span class="hidden xs:inline">Auth</span>
+                {% if not cookies_ok %}
+                <span class="w-2 h-2 rounded-full bg-amber-400 absolute top-1.5 right-1.5 animate-ping"></span>
+                <span class="w-2 h-2 rounded-full bg-amber-400 absolute top-1.5 right-1.5"></span>
+                {% endif %}
+            </button>
+            <button onclick="switchTab('logs')" id="tabBtn-logs" class="tab-btn flex-1 py-2 px-2 rounded-xl text-center transition flex items-center justify-center space-x-1.5 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-terminal"></i>
+                <span class="hidden xs:inline">Logs</span>
+            </button>
+        </nav>
 
-            <!-- Search Results Container -->
-            <div id="searchResults" class="hidden space-y-2 pt-2 border-t border-slate-700/50 max-h-96 overflow-y-auto pr-1"></div>
-        </div>
-
-        <!-- Add by URL Card -->
-        <div class="bg-slate-800/60 p-5 rounded-2xl border border-slate-700/60 shadow-lg space-y-3">
-            <details class="group">
-                <summary class="cursor-pointer text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                    <span class="flex items-center space-x-2">
-                        <i class="fa-solid fa-link text-indigo-400"></i>
-                        <span>Paste Direct Link (Playlists / Albums)</span>
+        <!-- ================= TAB 1: SEARCH (DEFAULT) ================= -->
+        <section id="tab-search" class="tab-content space-y-4">
+            
+            <!-- Search Input Box -->
+            <div class="glass-panel p-4 rounded-2xl space-y-3 shadow-lg">
+                <div class="relative flex items-center">
+                    <span class="absolute left-3.5 text-slate-400 pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass"></i>
                     </span>
-                    <i class="fa-solid fa-chevron-down group-open:rotate-180 transition-transform text-xs"></i>
-                </summary>
-                <form action="/add" method="POST" class="space-y-3 mt-3">
-                    <div>
-                        <input type="url" name="url" placeholder="https://music.youtube.com/playlist?list=... or video URL" required
-                            class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition text-slate-100 placeholder-slate-500">
+                    <input type="text" id="searchInput" placeholder="Search track, artist, album..."
+                        class="w-full pl-10 pr-10 py-3 bg-slate-900/90 border border-slate-700/80 rounded-xl text-sm focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition text-slate-100 placeholder-slate-500 shadow-inner"
+                        onkeydown="if(event.key==='Enter') doSearch()">
+                    <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3 text-slate-500 hover:text-slate-300 p-1">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Action Button & Filter Chips -->
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center space-x-1.5 overflow-x-auto pb-1 no-scrollbar text-2xs">
+                        <button onclick="quickSearch('Daft Punk')" class="touch-action-btn px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-slate-300 shrink-0">⚡ Daft Punk</button>
+                        <button onclick="quickSearch('Synthwave Chill')" class="touch-action-btn px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-slate-300 shrink-0">🌌 Synthwave</button>
+                        <button onclick="quickSearch('Lo-Fi Hip Hop')" class="touch-action-btn px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-slate-300 shrink-0">☕ Lo-Fi</button>
+                        <button onclick="quickSearch('The Weeknd')" class="touch-action-btn px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-slate-300 shrink-0">🎙️ The Weeknd</button>
                     </div>
-                    <div class="flex items-center justify-between">
-                        <label class="flex items-center space-x-2 text-xs text-slate-300">
-                            <input type="checkbox" name="sync_now" value="true" checked class="rounded border-slate-700 text-indigo-500 focus:ring-0">
+
+                    <button onclick="doSearch()" id="searchBtn"
+                        class="touch-action-btn px-4 py-2 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 font-semibold text-xs text-white rounded-xl shadow-md transition flex items-center space-x-1.5 shrink-0">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        <span>Find</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Results Display -->
+            <div id="searchResults" class="space-y-2.5">
+                <div class="p-8 text-center text-slate-500 text-xs italic glass-panel rounded-2xl border-dashed">
+                    <i class="fa-solid fa-music text-slate-600 text-2xl mb-2 block"></i>
+                    Search above to download any song or album in 320kbps MP3
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: DIRECT LINK ================= -->
+        <section id="tab-direct" class="tab-content hidden space-y-4">
+            <div class="glass-panel p-5 rounded-2xl shadow-lg space-y-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-link"></i>
+                    </div>
+                    <h2 class="text-sm font-semibold text-slate-200">Paste YouTube Link</h2>
+                </div>
+                <p class="text-2xs text-slate-400">Supports individual songs, albums, and full public/unlisted YouTube playlists.</p>
+
+                <form id="directAddForm" onsubmit="submitDirectLink(event)" class="space-y-3">
+                    <div>
+                        <input type="url" id="directUrlInput" placeholder="https://www.youtube.com/playlist?list=... or watch URL" required
+                            class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                        <label class="flex items-center space-x-2 text-2xs text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="directSyncNow" checked class="rounded border-slate-700 text-indigo-600 focus:ring-0">
                             <span>Start download immediately</span>
                         </label>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 font-semibold text-xs rounded-xl shadow transition">
-                            Add Link
+                        <button type="submit" id="directAddBtn"
+                            class="touch-action-btn px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl shadow transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Add & Queue</span>
                         </button>
                     </div>
                 </form>
-            </details>
-        </div>
-
-        <!-- Cookies Card -->
-        <div class="bg-slate-800/60 p-5 rounded-2xl border border-slate-700/60 shadow-lg space-y-3">
-            <div class="flex items-center justify-between">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-2">
-                    <i class="fa-solid fa-cookie-bite text-amber-400"></i>
-                    <span>YouTube Authentication Cookies</span>
-                </h2>
-                {% if cookies_ok %}
-                <span class="px-2 py-0.5 rounded-full text-2xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-medium">
-                    <i class="fa-solid fa-check mr-1"></i>Cookies Configured
-                </span>
-                {% else %}
-                <span class="px-2 py-0.5 rounded-full text-2xs bg-amber-500/20 text-amber-400 border border-amber-500/30 font-medium animate-pulse">
-                    <i class="fa-solid fa-triangle-exclamation mr-1"></i>Required for Datacenter IP
-                </span>
-                {% endif %}
             </div>
-            
-            <details class="group bg-slate-900/60 rounded-xl border border-slate-700/50 p-3 text-xs text-slate-300">
-                <summary class="cursor-pointer font-semibold text-amber-400 hover:text-amber-300 flex items-center justify-between">
-                    <span>How to get your YouTube cookies (Takes 30 seconds)</span>
-                    <i class="fa-solid fa-chevron-down group-open:rotate-180 transition-transform"></i>
-                </summary>
-                <div class="mt-3 space-y-2 text-slate-400 leading-relaxed pl-1">
-                    <p>1. In Chrome / Firefox / Edge, install extension: <b class="text-slate-200">"Get cookies.txt LOCALLY"</b>.</p>
-                    <p>2. Open <a href="https://www.youtube.com" target="_blank" class="text-indigo-400 underline">youtube.com</a> while signed in.</p>
-                    <p>3. Click the extension icon and click <b>Export</b> (or copy all text).</p>
-                    <p>4. Paste or upload the file below and click <b>Save Cookies</b>.</p>
-                </div>
-            </details>
+        </section>
 
-            <form action="/cookies" method="POST" enctype="multipart/form-data" class="space-y-3 pt-1">
-                <div>
-                    <textarea name="cookies_text" rows="2" placeholder="Paste your Netscape-format cookies.txt text here..."
-                        class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono focus:outline-none focus:border-amber-500 transition text-slate-200 placeholder-slate-600"></textarea>
-                </div>
+        <!-- ================= TAB 3: PLAYLISTS / LIBRARY ================= -->
+        <section id="tab-playlists" class="tab-content hidden space-y-4">
+            <div class="glass-panel p-5 rounded-2xl shadow-lg space-y-4">
                 <div class="flex items-center justify-between">
-                    <div class="text-xs text-slate-400 flex items-center space-x-2">
-                        <span>Or file:</span>
-                        <input type="file" name="cookies_file" accept=".txt" class="text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                        <h2 class="text-sm font-semibold text-slate-200">Tracked Sources</h2>
                     </div>
-                    <button type="submit" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 font-semibold text-xs rounded-xl shadow transition">
-                        Save Cookies
+
+                    <button onclick="triggerFullSync()" id="syncAllBtn"
+                        class="touch-action-btn px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 rounded-xl text-2xs font-semibold transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-rotate" id="syncAllIcon"></i>
+                        <span>Sync All Now</span>
                     </button>
                 </div>
-            </form>
-        </div>
 
-        <!-- Synced Playlists & Songs Card -->
-        <div class="bg-slate-800/60 p-5 rounded-2xl border border-slate-700/60 shadow-lg space-y-4">
-            <div class="flex items-center justify-between">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-2">
-                    <i class="fa-solid fa-list-check text-indigo-400"></i>
-                    <span>Synced Playlists & Links ({{ playlists|length }})</span>
-                </h2>
-                <form action="/sync" method="POST">
-                    <button type="submit" {% if is_syncing %}disabled{% endif %} class="px-3 py-1.5 {% if is_syncing %}bg-slate-700 text-slate-500{% else %}bg-slate-700 hover:bg-slate-600 text-slate-200{% endif %} text-xs font-semibold rounded-lg transition flex items-center space-x-1.5">
-                        <i class="fa-solid fa-rotate {% if is_syncing %}fa-spin{% endif %}"></i>
-                        <span>{% if is_syncing %}Syncing...{% else %}Sync All Now{% endif %}</span>
-                    </button>
-                </form>
-            </div>
-
-            {% if playlists %}
-            <div class="divide-y divide-slate-700/60 max-h-56 overflow-y-auto pr-1">
-                {% for pl in playlists %}
-                <div class="py-2.5 flex items-center justify-between space-x-3">
-                    <div class="truncate text-xs font-mono text-slate-300 flex items-center space-x-2">
-                        <i class="fa-solid fa-link text-slate-500 text-2xs"></i>
-                        <span class="truncate">{{ pl }}</span>
-                    </div>
-                    <form action="/delete" method="POST" class="shrink-0">
-                        <input type="hidden" name="url" value="{{ pl }}">
-                        <button type="submit" class="text-slate-500 hover:text-rose-400 p-1.5 transition text-xs" title="Remove playlist">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </form>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="text-xs text-slate-500 italic text-center py-4">No music added yet. Use the search box above or paste a link!</p>
-            {% endif %}
-        </div>
-
-        <!-- Logs & Status Card -->
-        <div class="bg-slate-800/60 p-5 rounded-2xl border border-slate-700/60 shadow-lg space-y-3">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400">Live Sync Logs</h2>
-                    {% if is_syncing %}
-                    <span class="px-2 py-0.5 rounded-full text-2xs bg-amber-500/20 text-amber-400 border border-amber-500/30 font-medium animate-pulse">Downloading...</span>
+                <div id="playlistsList" class="divide-y divide-slate-800/80 max-h-80 overflow-y-auto pr-1">
+                    {% if playlists %}
+                        {% for pl in playlists %}
+                        <div class="py-3 flex items-center justify-between space-x-3 group">
+                            <div class="truncate flex items-center space-x-2.5 text-xs text-slate-300 min-w-0">
+                                <i class="fa-brands fa-youtube text-rose-500 text-xs shrink-0"></i>
+                                <span class="truncate font-mono text-2xs">{{ pl }}</span>
+                            </div>
+                            <button onclick="deletePlaylist('{{ pl }}')" class="touch-action-btn text-slate-500 hover:text-rose-400 p-1.5 transition text-xs shrink-0" title="Remove link">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
                     {% else %}
-                    <span class="px-2 py-0.5 rounded-full text-2xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-medium">Idle</span>
+                        <p class="text-2xs text-slate-500 italic text-center py-6">No links tracked yet. Use the Search tab to queue songs!</p>
                     {% endif %}
                 </div>
-                <button onclick="location.reload()" class="text-xs text-slate-400 hover:text-slate-200">
-                    <i class="fa-solid fa-arrows-rotate"></i> Refresh
-                </button>
             </div>
-            <pre class="bg-slate-950 p-3.5 rounded-xl text-2xs font-mono text-slate-400 overflow-x-auto max-h-48 border border-slate-800/80 whitespace-pre-wrap">{{ logs }}</pre>
-        </div>
+        </section>
+
+        <!-- ================= TAB 4: COOKIES & AUTH ================= -->
+        <section id="tab-cookies" class="tab-content hidden space-y-4">
+            <div class="glass-panel p-5 rounded-2xl shadow-lg space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <h2 class="text-sm font-semibold text-slate-200">YouTube Authentication</h2>
+                    </div>
+
+                    {% if cookies_ok %}
+                    <span class="px-2 py-0.5 rounded-full text-2xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1">
+                        <i class="fa-solid fa-check"></i> Active
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-0.5 rounded-full text-2xs bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium animate-pulse flex items-center gap-1">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Required
+                    </span>
+                    {% endif %}
+                </div>
+
+                <p class="text-2xs text-slate-400 leading-relaxed">
+                    YouTube blocks cloud datacenter IPs with <i>"Sign in to confirm you're not a bot"</i>. Pasting your browser cookies bypasses this permanently.
+                </p>
+
+                <!-- Step-by-Step Dropdown -->
+                <details class="bg-slate-900/80 rounded-xl border border-slate-800 p-3 text-2xs text-slate-300">
+                    <summary class="cursor-pointer font-semibold text-amber-400 hover:text-amber-300 flex items-center justify-between">
+                        <span>How to export cookies in 30 seconds</span>
+                        <i class="fa-solid fa-chevron-down text-2xs transition-transform"></i>
+                    </summary>
+                    <ol class="mt-2.5 space-y-1.5 text-slate-400 list-decimal list-inside pl-1">
+                        <li>Install Chrome/Firefox extension: <b class="text-slate-200">"Get cookies.txt LOCALLY"</b>.</li>
+                        <li>Open <a href="https://www.youtube.com" target="_blank" class="text-indigo-400 underline">youtube.com</a> logged into your account.</li>
+                        <li>Click the extension icon and copy/export the cookies text.</li>
+                        <li>Paste or upload the file below and tap <b>Save Cookies</b>.</li>
+                    </ol>
+                </details>
+
+                <form action="/cookies" method="POST" enctype="multipart/form-data" class="space-y-3 pt-1">
+                    <div>
+                        <textarea name="cookies_text" rows="3" placeholder="Paste your Netscape format cookies text here..."
+                            class="w-full px-3 py-2 bg-slate-900 border border-slate-700/80 rounded-xl text-2xs font-mono focus:outline-none focus:border-amber-500 text-slate-200 placeholder-slate-600"></textarea>
+                    </div>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div class="text-2xs text-slate-400 flex items-center space-x-1.5">
+                            <span>Or upload:</span>
+                            <input type="file" name="cookies_file" accept=".txt" class="text-2xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-2xs file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
+                        </div>
+                        <button type="submit" class="touch-action-btn px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-xl shadow transition">
+                            Save Cookies
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- ================= TAB 5: LIVE LOGS ================= -->
+        <section id="tab-logs" class="tab-content hidden space-y-4">
+            <div class="glass-panel p-4 rounded-2xl shadow-lg space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-terminal"></i>
+                        </div>
+                        <h2 class="text-sm font-semibold text-slate-200">Live Sync Terminal</h2>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <label class="flex items-center space-x-1.5 text-2xs text-slate-400 cursor-pointer">
+                            <input type="checkbox" id="autoRefreshLogs" checked class="rounded border-slate-700 text-rose-500 focus:ring-0">
+                            <span>Auto</span>
+                        </label>
+                        <button onclick="fetchLogs()" class="touch-action-btn p-1.5 text-slate-400 hover:text-slate-200 text-xs">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <pre id="logConsole" class="bg-slate-950 p-3 rounded-xl text-2xs font-mono text-emerald-400/90 overflow-x-auto max-h-72 border border-slate-800/80 whitespace-pre-wrap leading-relaxed">{{ logs }}</pre>
+                </div>
+            </div>
+        </section>
 
     </div>
 
+    <!-- Scripts -->
     <script>
+        // Tab Navigation
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-rose-600', 'text-white', 'shadow-sm', 'font-semibold');
+                btn.classList.add('text-slate-400');
+            });
+
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            const activeBtn = document.getElementById(`tabBtn-${tabName}`);
+            if (activeTab && activeBtn) {
+                activeTab.classList.remove('hidden');
+                activeBtn.classList.add('bg-rose-600', 'text-white', 'shadow-sm', 'font-semibold');
+                activeBtn.classList.remove('text-slate-400');
+            }
+
+            if (tabName === 'logs') {
+                fetchLogs();
+            }
+        }
+
+        // Toast Messages
+        function showToast(message, isError = false) {
+            const toastBox = document.getElementById('toastBox');
+            toastBox.innerHTML = `
+                <div class="glass-panel p-3 rounded-xl shadow-2xl flex items-center space-x-3 border ${isError ? 'border-rose-500/50 bg-rose-950/80 text-rose-200' : 'border-emerald-500/50 bg-slate-900/90 text-slate-100'}">
+                    <i class="fa-solid ${isError ? 'fa-circle-exclamation text-rose-400' : 'fa-circle-check text-emerald-400'} text-base"></i>
+                    <p class="text-xs font-medium">${message}</p>
+                </div>
+            `;
+            toastBox.classList.remove('opacity-0', '-translate-y-4');
+            toastBox.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toastBox.classList.add('opacity-0', '-translate-y-4');
+                toastBox.classList.remove('opacity-100', 'translate-y-0');
+            }, 3000);
+        }
+
+        // Search Engine
         async function doSearch() {
-            const query = document.getElementById('searchInput').value.trim();
+            const input = document.getElementById('searchInput');
+            const query = input.value.trim();
             if (!query) return;
 
             const btn = document.getElementById('searchBtn');
             const container = document.getElementById('searchResults');
-            
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Searching...</span>';
+            const clearBtn = document.getElementById('clearSearchBtn');
+
+            clearBtn.classList.remove('hidden');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             btn.disabled = true;
-            container.classList.remove('hidden');
-            container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Searching YouTube...</p>';
+
+            container.innerHTML = `
+                <div class="p-8 text-center text-slate-400 text-xs glass-panel rounded-2xl">
+                    <i class="fa-solid fa-spinner fa-spin text-rose-500 text-xl mb-2 block"></i>
+                    Searching YouTube for "${query}"...
+                </div>
+            `;
 
             try {
                 const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
                 const data = await res.json();
-                
+
                 if (!data.results || data.results.length === 0) {
-                    container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No results found.</p>';
+                    container.innerHTML = `
+                        <div class="p-8 text-center text-slate-400 text-xs glass-panel rounded-2xl">
+                            <i class="fa-solid fa-face-frown text-slate-500 text-xl mb-2 block"></i>
+                            No results found for "${query}". Try another search term.
+                        </div>
+                    `;
                     return;
                 }
 
                 container.innerHTML = data.results.map(item => `
-                    <div class="flex items-center justify-between bg-slate-900/80 p-2.5 rounded-xl border border-slate-700/50 hover:border-slate-600 transition space-x-3">
-                        <img src="${item.thumbnail}" class="w-16 h-12 rounded-lg object-cover shrink-0 bg-slate-800">
-                        <div class="min-w-0 flex-1">
-                            <h3 class="text-xs font-semibold text-slate-100 truncate">${item.title}</h3>
-                            <p class="text-2xs text-slate-400 truncate">${item.channel} • <span class="text-rose-400 font-medium">${item.duration}</span></p>
+                    <div class="glass-panel p-2.5 rounded-2xl flex items-center justify-between space-x-3 hover:border-slate-700 transition">
+                        <div class="relative w-20 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-950 border border-slate-800">
+                            <img src="${item.thumbnail}" alt="" class="w-full h-full object-cover">
+                            ${item.duration ? `<span class="absolute bottom-1 right-1 bg-black/80 text-white text-3xs px-1.5 py-0.2 rounded font-mono font-medium">${item.duration}</span>` : ''}
                         </div>
-                        <button onclick="addAndDownload('${item.url}', this)"
-                            class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 font-semibold text-xs rounded-lg shadow transition shrink-0 flex items-center space-x-1.5">
-                            <i class="fa-solid fa-plus"></i>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-xs font-semibold text-slate-100 line-clamp-1 leading-snug">${item.title}</h3>
+                            <p class="text-2xs text-slate-400 truncate mt-0.5 flex items-center gap-1">
+                                <span>${item.channel}</span>
+                                ${item.type === 'playlist' ? '<span class="text-indigo-400 font-semibold">• Playlist</span>' : ''}
+                            </p>
+                        </div>
+                        <button onclick="downloadTrack('${item.url}', this)"
+                            class="touch-action-btn px-3 py-2 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-semibold text-2xs rounded-xl shadow-md transition shrink-0 flex items-center space-x-1">
+                            <i class="fa-solid fa-download"></i>
                             <span>Download</span>
                         </button>
                     </div>
                 `).join('');
 
             } catch (err) {
-                container.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Error searching: ${err.message}</p>`;
+                container.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs glass-panel rounded-2xl">Search error: ${err.message}</div>`;
             } finally {
-                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i><span>Search</span>';
+                btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i><span>Find</span>';
                 btn.disabled = false;
             }
         }
 
-        async function addAndDownload(url, btnElement) {
-            btnElement.disabled = true;
-            btnElement.className = "px-3 py-1.5 bg-emerald-600 font-semibold text-xs rounded-lg transition shrink-0 flex items-center space-x-1.5 text-white";
-            btnElement.innerHTML = '<i class="fa-solid fa-check"></i><span>Downloading...</span>';
+        function quickSearch(term) {
+            document.getElementById('searchInput').value = term;
+            doSearch();
+        }
 
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            document.getElementById('searchResults').innerHTML = `
+                <div class="p-8 text-center text-slate-500 text-xs italic glass-panel rounded-2xl border-dashed">
+                    <i class="fa-solid fa-music text-slate-600 text-2xl mb-2 block"></i>
+                    Search above to download any song or album in 320kbps MP3
+                </div>
+            `;
+        }
+
+        // Direct Download Action
+        async function downloadTrack(url, btnElement) {
+            if (btnElement) {
+                btnElement.disabled = true;
+                btnElement.className = "px-3 py-2 bg-emerald-600 text-white font-semibold text-2xs rounded-xl shrink-0 flex items-center space-x-1";
+                btnElement.innerHTML = '<i class="fa-solid fa-check"></i><span>Queued!</span>';
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('url', url);
+                formData.append('sync_now', 'true');
+
+                const res = await fetch('/add', { method: 'POST', body: formData });
+                showToast("Track added! Download started in background.");
+                updateStatusBadge(true);
+            } catch (err) {
+                showToast("Failed to queue download", true);
+            }
+        }
+
+        // Direct Link Form Submit
+        async function submitDirectLink(e) {
+            e.preventDefault();
+            const input = document.getElementById('directUrlInput');
+            const syncNow = document.getElementById('directSyncNow').checked;
+            const btn = document.getElementById('directAddBtn');
+            const url = input.value.trim();
+            if (!url) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Adding...</span>';
+
+            try {
+                const formData = new FormData();
+                formData.append('url', url);
+                if (syncNow) formData.append('sync_now', 'true');
+
+                await fetch('/add', { method: 'POST', body: formData });
+                showToast("Link added to tracking list!");
+                input.value = '';
+                setTimeout(() => location.reload(), 800);
+            } catch (err) {
+                showToast("Error adding link", true);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i><span>Add & Queue</span>';
+            }
+        }
+
+        // Delete Playlist
+        async function deletePlaylist(url) {
+            if (!confirm("Remove this link from automatic sync?")) return;
             const formData = new FormData();
             formData.append('url', url);
-            formData.append('sync_now', 'true');
+            await fetch('/delete', { method: 'POST', body: formData });
+            showToast("Removed from tracking list");
+            setTimeout(() => location.reload(), 600);
+        }
 
-            await fetch('/add', {
-                method: 'POST',
-                body: formData
-            });
+        // Full Sync Action
+        async function triggerFullSync() {
+            const btn = document.getElementById('syncAllBtn');
+            const icon = document.getElementById('syncAllIcon');
+            icon.classList.add('fa-spin');
+            btn.disabled = true;
+
+            await fetch('/sync', { method: 'POST' });
+            showToast("Full sync started for all playlists!");
+            updateStatusBadge(true);
 
             setTimeout(() => {
-                location.reload();
-            }, 1000);
+                icon.classList.remove('fa-spin');
+                btn.disabled = false;
+            }, 2000);
         }
+
+        // Status updater
+        function updateStatusBadge(syncing) {
+            const badge = document.getElementById('headerSyncBadge');
+            const mobilePill = document.getElementById('mobileStatusPill');
+            if (syncing) {
+                if (badge) {
+                    badge.className = "hidden sm:inline-block px-2 py-0.5 text-2xs rounded-full font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse";
+                    badge.innerText = "⚡ Syncing";
+                }
+                if (mobilePill) {
+                    mobilePill.className = "sm:hidden px-2 py-1 text-2xs rounded-full font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse";
+                    mobilePill.innerText = "Syncing...";
+                }
+            } else {
+                if (badge) {
+                    badge.className = "hidden sm:inline-block px-2 py-0.5 text-2xs rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                    badge.innerText = "● Ready";
+                }
+                if (mobilePill) {
+                    mobilePill.className = "sm:hidden px-2 py-1 text-2xs rounded-full font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                    mobilePill.innerText = "Ready";
+                }
+            }
+        }
+
+        // Log Fetcher
+        async function fetchLogs() {
+            try {
+                const res = await fetch('/api/logs');
+                const data = await res.json();
+                const consoleEl = document.getElementById('logConsole');
+                consoleEl.innerText = data.logs;
+                updateStatusBadge(data.is_syncing);
+            } catch (e) {}
+        }
+
+        // Periodic background poll for status & logs
+        setInterval(() => {
+            const autoLogs = document.getElementById('autoRefreshLogs');
+            const logsTabVisible = !document.getElementById('tab-logs').classList.contains('hidden');
+            if (logsTabVisible && autoLogs && autoLogs.checked) {
+                fetchLogs();
+            } else {
+                // background status ping
+                fetch('/api/status').then(r => r.json()).then(d => {
+                    updateStatusBadge(d.is_syncing);
+                }).catch(() => {});
+            }
+        }, 3500);
     </script>
 </body>
 </html>
@@ -380,22 +714,37 @@ HTML_TEMPLATE = """
 @app.route("/")
 def index():
     playlists = get_playlists()
-    logs = "No logs yet."
-    if os.path.exists(LOG_FILE):
-        try:
-            with open(LOG_FILE, "r", encoding="utf-8", errors="ignore") as f:
-                lines = f.readlines()
-                logs = "".join(lines[-35:]) if lines else "Empty log."
-        except Exception as e:
-            logs = f"Error reading logs: {e}"
+    logs = get_recent_logs(35)
     host = request.host.split(":")[0]
-    return render_template_string(HTML_TEMPLATE, playlists=playlists, logs=logs, is_syncing=is_syncing, host=host, cookies_ok=has_cookies())
+    return render_template_string(
+        HTML_TEMPLATE,
+        playlists=playlists,
+        logs=logs,
+        is_syncing=is_syncing,
+        host=host,
+        cookies_ok=has_cookies()
+    )
 
 @app.route("/api/search")
 def api_search():
     query = request.args.get("q", "").strip()
     results = search_youtube(query)
     return jsonify({"results": results})
+
+@app.route("/api/logs")
+def api_logs():
+    return jsonify({
+        "logs": get_recent_logs(40),
+        "is_syncing": is_syncing
+    })
+
+@app.route("/api/status")
+def api_status():
+    return jsonify({
+        "is_syncing": is_syncing,
+        "playlists_count": len(get_playlists()),
+        "cookies_ok": has_cookies()
+    })
 
 @app.route("/add", methods=["POST"])
 def add():
@@ -406,8 +755,10 @@ def add():
         if url not in playlists:
             playlists.append(url)
             save_playlists(playlists)
-        if sync_now and not is_syncing:
-            threading.Thread(target=run_sync_thread, daemon=True).start()
+        if sync_now:
+            trigger_sync_async()
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+        return jsonify({"status": "ok", "url": url})
     return redirect(url_for("index"))
 
 @app.route("/cookies", methods=["POST"])
@@ -436,9 +787,7 @@ def delete():
 
 @app.route("/sync", methods=["POST"])
 def sync():
-    global is_syncing
-    if not is_syncing:
-        threading.Thread(target=run_sync_thread, daemon=True).start()
+    trigger_sync_async()
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
