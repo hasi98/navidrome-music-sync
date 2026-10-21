@@ -65,76 +65,106 @@ def get_recent_logs(lines_count=35):
 def search_youtube(query, limit=10):
     if not query.strip():
         return []
+
+    # Method 1: Fast direct desktop scrape (sub-second)
     url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}"
     req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9"
     })
     try:
         with urllib.request.urlopen(req, timeout=6) as response:
             html = response.read().decode('utf-8')
+        
+        match = re.search(r"var ytInitialData = ({.*?});</script>", html)
+        if not match:
+            match = re.search(r"ytInitialData = ({.*?});", html)
+        
+        if match:
+            data = json.loads(match.group(1))
+            items = []
+            contents = data.get("contents", {}).get("twoColumnSearchResultsRenderer", {}).get("primaryContents", {}).get("sectionListRenderer", {}).get("contents", [])
+            
+            for sec in contents:
+                item_sec = sec.get("itemSectionRenderer", {}).get("contents", [])
+                for item in item_sec:
+                    vr = item.get("videoRenderer")
+                    pr = item.get("playlistRenderer")
+                    if vr:
+                        video_id = vr.get("videoId")
+                        title = vr.get("title", {}).get("runs", [{}])[0].get("text", "")
+                        author = vr.get("ownerText", {}).get("runs", [{}])[0].get("text", "")
+                        duration = vr.get("lengthText", {}).get("simpleText", "")
+                        thumbs = vr.get("thumbnail", {}).get("thumbnails", [])
+                        thumb = thumbs[-1]["url"] if thumbs else f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+                        if video_id and title:
+                            items.append({
+                                "type": "video",
+                                "id": video_id,
+                                "title": title,
+                                "channel": author,
+                                "duration": duration,
+                                "thumbnail": thumb,
+                                "url": f"https://www.youtube.com/watch?v={video_id}"
+                            })
+                    elif pr:
+                        pl_id = pr.get("playlistId")
+                        title = pr.get("title", {}).get("simpleText", "")
+                        author = pr.get("shortBylineText", {}).get("runs", [{}])[0].get("text", "")
+                        count = pr.get("videoCount", "")
+                        thumbs = pr.get("thumbnails", [{}])[0].get("thumbnails", [])
+                        thumb = thumbs[-1]["url"] if thumbs else ""
+                        if pl_id and title:
+                            items.append({
+                                "type": "playlist",
+                                "id": pl_id,
+                                "title": title,
+                                "channel": author,
+                                "duration": f"{count} videos",
+                                "thumbnail": thumb,
+                                "url": f"https://www.youtube.com/playlist?list={pl_id}"
+                            })
+                    if len(items) >= limit:
+                        break
+                if len(items) >= limit:
+                    break
+            
+            if items:
+                return items
     except Exception as e:
-        print("Search error:", e)
-        return []
+        print("Scrape search error:", e)
 
-    match = re.search(r"var ytInitialData = ({.*?});</script>", html)
-    if not match:
-        match = re.search(r"ytInitialData = ({.*?});", html)
-    if not match:
-        return []
-
+    # Method 2: Fallback to yt-dlp native search
     try:
-        data = json.loads(match.group(1))
-    except Exception:
-        return []
-
-    items = []
-    contents = data.get("contents", {}).get("twoColumnSearchResultsRenderer", {}).get("primaryContents", {}).get("sectionListRenderer", {}).get("contents", [])
-    
-    for sec in contents:
-        item_sec = sec.get("itemSectionRenderer", {}).get("contents", [])
-        for item in item_sec:
-            vr = item.get("videoRenderer")
-            pr = item.get("playlistRenderer")
-            if vr:
-                video_id = vr.get("videoId")
-                title = vr.get("title", {}).get("runs", [{}])[0].get("text", "")
-                author = vr.get("ownerText", {}).get("runs", [{}])[0].get("text", "")
-                duration = vr.get("lengthText", {}).get("simpleText", "")
-                thumbs = vr.get("thumbnail", {}).get("thumbnails", [])
-                thumb = thumbs[-1]["url"] if thumbs else f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
-                if video_id and title:
+        cmd = ["/usr/local/bin/yt-dlp", "--flat-playlist", "--dump-single-json", f"ytsearch{limit}:{query}"]
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
+        if res.returncode == 0 and res.stdout:
+            data = json.loads(res.stdout)
+            entries = data.get("entries", [])
+            items = []
+            for e in entries:
+                v_id = e.get("id")
+                v_title = e.get("title")
+                if v_id and v_title:
+                    duration_sec = e.get("duration") or 0
+                    mins = int(duration_sec // 60)
+                    secs = int(duration_sec % 60)
+                    dur_str = f"{mins}:{secs:02d}" if duration_sec else ""
                     items.append({
                         "type": "video",
-                        "id": video_id,
-                        "title": title,
-                        "channel": author,
-                        "duration": duration,
-                        "thumbnail": thumb,
-                        "url": f"https://www.youtube.com/watch?v={video_id}"
+                        "id": v_id,
+                        "title": v_title,
+                        "channel": e.get("uploader") or e.get("channel") or "",
+                        "duration": dur_str,
+                        "thumbnail": f"https://i.ytimg.com/vi/{v_id}/hqdefault.jpg",
+                        "url": e.get("url") if e.get("url", "").startswith("http") else f"https://www.youtube.com/watch?v={v_id}"
                     })
-            elif pr:
-                pl_id = pr.get("playlistId")
-                title = pr.get("title", {}).get("simpleText", "")
-                author = pr.get("shortBylineText", {}).get("runs", [{}])[0].get("text", "")
-                count = pr.get("videoCount", "")
-                thumbs = pr.get("thumbnails", [{}])[0].get("thumbnails", [])
-                thumb = thumbs[-1]["url"] if thumbs else ""
-                if pl_id and title:
-                    items.append({
-                        "type": "playlist",
-                        "id": pl_id,
-                        "title": title,
-                        "channel": author,
-                        "duration": f"{count} videos",
-                        "thumbnail": thumb,
-                        "url": f"https://www.youtube.com/playlist?list={pl_id}"
-                    })
-            if len(items) >= limit:
-                break
-        if len(items) >= limit:
-            break
-    return items
+            if items:
+                return items
+    except Exception as e:
+        print("yt-dlp fallback search error:", e)
+
+    return []
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
