@@ -33,6 +33,7 @@ current_download = {
     "eta": "",
     "status": "idle",  # "idle", "starting", "downloading", "converting", "finalizing", "completed", "failed", "cancelled"
     "message": "",
+    "error": "",
     "queue_text": "",
     "playlist_title": ""
 }
@@ -106,12 +107,13 @@ def run_single_download(url, title="", video_id="", queue_info=None):
                 "eta": "",
                 "status": "starting",
                 "message": "Initializing download...",
+                "error": "",
                 "queue_text": f"Track {queue_info['current']} of {queue_info['total']}" if queue_info else "",
                 "playlist_title": queue_info.get("playlist_title", "") if queue_info else ""
             })
 
+        error_reason = ""
         try:
-            # Strip radio mix and extraneous playlist parameters from single track downloads
             clean_url = re.sub(r"[?&]list=RD[^&]*", "", url)
             clean_url = re.sub(r"[?&]start_radio=[^&]*", "", clean_url)
             
@@ -150,6 +152,15 @@ def run_single_download(url, title="", video_id="", queue_info=None):
                     f.flush()
                     line_str = line.strip()
                     
+                    if "Sign in to confirm" in line_str:
+                        error_reason = "YouTube bot check: Update cookies in Auth tab"
+                    elif "Video unavailable" in line_str or "Private video" in line_str:
+                        error_reason = "Video is private or unavailable"
+                    elif "HTTP Error 429" in line_str:
+                        error_reason = "Rate limited by YouTube. Please wait."
+                    elif line_str.startswith("ERROR:") and not error_reason:
+                        error_reason = line_str.replace("ERROR: ", "")[:85]
+
                     # Parse percentage
                     p_match = re.search(r"\[download\]\s+([\d\.]+)%", line_str)
                     if p_match:
@@ -196,25 +207,30 @@ def run_single_download(url, title="", video_id="", queue_info=None):
                         current_download["status"] = "completed"
                         current_download["percent"] = 100.0
                         current_download["speed"] = "Completed!"
+                        current_download["error"] = ""
                         if video_id:
                             completed_download_ids.add(video_id)
                     return True
                 else:
-                    f.write(f"❌ Download failed (code {ret}) at: {end_str}\n==========================================\n")
+                    err_msg = error_reason or f"Failed (exit code {ret})"
+                    f.write(f"❌ Download failed ({err_msg}) at: {end_str}\n==========================================\n")
                     with download_lock:
                         current_download["status"] = "failed"
-                        current_download["message"] = f"Failed with code {ret}"
+                        current_download["error"] = err_msg
+                        current_download["message"] = err_msg
+                        current_download["percent"] = 0.0
+                        current_download["speed"] = "Failed"
                     return False
         except Exception as e:
             with open(LOG_FILE, "a", encoding="utf-8") as f:
                 f.write(f"Error during download: {e}\n")
             with download_lock:
                 current_download["status"] = "failed"
+                current_download["error"] = str(e)
                 current_download["message"] = str(e)
             return False
         finally:
             is_syncing = False
-            # Retain completed state for 8 seconds before resetting to idle
             def reset_idle():
                 import time
                 time.sleep(8)
@@ -244,6 +260,7 @@ def run_playlist_download_queue(tracks, playlist_title):
         playlist_queue["completed_ids"] = []
         playlist_queue["failed_ids"] = []
 
+    consecutive_bot_errors = 0
     try:
         for idx, tr in enumerate(tracks):
             if abort_queue:
@@ -260,10 +277,17 @@ def run_playlist_download_queue(tracks, playlist_title):
             )
             with download_lock:
                 if success:
+                    consecutive_bot_errors = 0
                     playlist_queue["completed_ids"].append(tr["id"])
                     completed_download_ids.add(tr["id"])
                 else:
                     playlist_queue["failed_ids"].append(tr["id"])
+                    if "bot" in current_download.get("error", "").lower():
+                        consecutive_bot_errors += 1
+                        if consecutive_bot_errors >= 2:
+                            current_download["status"] = "failed"
+                            current_download["error"] = "Playlist paused: YouTube bot check. Please update cookies in Auth tab."
+                            break
     finally:
         with download_lock:
             playlist_queue["is_active"] = False
@@ -332,7 +356,7 @@ def search_youtube(query, limit=40):
     if not query.strip():
         return []
 
-    # Method 1: Fast direct desktop scrape (sub-second)
+    # Fast direct scrape
     url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}"
     req = urllib.request.Request(url, headers={
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -354,7 +378,7 @@ def search_youtube(query, limit=40):
             for sec in contents:
                 item_sec = sec.get("itemSectionRenderer", {}).get("contents", [])
                 for item in item_sec:
-                    # 1. New YouTube 2024 lockupViewModel (Handles Playlists, Mixes & Videos!)
+                    # 1. New YouTube 2024 lockupViewModel (Playlists, Mixes & Videos)
                     lvm = item.get("lockupViewModel")
                     if lvm:
                         c_type = lvm.get("contentType", "")
@@ -484,7 +508,7 @@ def search_youtube(query, limit=40):
     except Exception as e:
         print("Scrape search error:", e)
 
-    # Method 2: Fallback to yt-dlp native search
+    # Fallback yt-dlp search
     try:
         cmd = ["/usr/local/bin/yt-dlp", "--flat-playlist", "--dump-single-json", f"ytsearch{limit}:{query}"]
         res = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
@@ -646,12 +670,6 @@ HTML_TEMPLATE = """
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
-        .line-clamp-3 {
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
     </style>
 </head>
 <body class="min-h-screen pb-32 flex flex-col items-center antialiased selection:bg-rose-500 selection:text-white">
@@ -808,6 +826,23 @@ HTML_TEMPLATE = """
                     <input type="text" id="libFilterInput" placeholder="Filter downloaded songs or artists..."
                         oninput="filterLibrary(this.value)"
                         class="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-pink-500">
+                </div>
+
+                <!-- Library Multi-Select & Bulk Actions Bar -->
+                <div class="flex items-center justify-between px-1 py-1 text-2xs border-b border-slate-800/80 pb-1.5">
+                    <label class="flex items-center space-x-2 text-slate-300 cursor-pointer select-none">
+                        <input type="checkbox" id="libSelectAllCheck" onchange="toggleSelectAllLibrary(this.checked)" class="rounded border-slate-700 text-pink-600 focus:ring-0">
+                        <span id="libSelectAllLabel">Select All</span>
+                    </label>
+
+                    <div id="libBulkActions" class="hidden flex items-center space-x-2">
+                        <span id="libSelectedCountBadge" class="text-pink-400 font-mono text-3xs">0 selected</span>
+                        <button onclick="deleteSelectedLibrarySongs()" id="libDeleteBtn"
+                            class="touch-action-btn px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-xl text-3xs flex items-center space-x-1 shadow transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                            <span>Delete Selected</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Downloaded Songs List -->
@@ -1022,31 +1057,35 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Floating Active Download & Audio Dock (Sits above bottom bar) -->
-    <div id="floatingDock" class="fixed bottom-16 left-1/2 -translate-x-1/2 w-11/12 max-w-xl z-40 hidden transition-all duration-300">
+    <!-- Floating Active Download & Audio Dock (Elevated safely above bottom bar) -->
+    <div id="floatingDock" class="fixed bottom-[4.75rem] sm:bottom-20 left-1/2 -translate-x-1/2 w-11/12 max-w-xl z-40 hidden transition-all duration-300 pb-[env(safe-area-inset-bottom)]">
         <!-- Download Status Card -->
         <div id="activeDownloadBar" class="glass-panel p-2.5 rounded-2xl shadow-2xl border border-rose-500/30 flex items-center justify-between gap-2.5 hidden">
-            <div class="flex items-center space-x-2 min-w-0 flex-1">
-                <div class="flex items-end space-x-0.5 h-3.5 shrink-0 px-1" id="dockEqContainer">
-                    <span class="w-1 bg-rose-500 rounded-full eq-bar-1"></span>
-                    <span class="w-1 bg-pink-500 rounded-full eq-bar-2"></span>
-                    <span class="w-1 bg-indigo-500 rounded-full eq-bar-3"></span>
-                    <span class="w-1 bg-rose-400 rounded-full eq-bar-4"></span>
+            <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+                <div class="flex items-center justify-center w-6 h-6 shrink-0" id="dockEqContainer">
+                    <div class="flex items-end space-x-0.5 h-3.5">
+                        <span class="w-1 bg-rose-500 rounded-full eq-bar-1"></span>
+                        <span class="w-1 bg-pink-500 rounded-full eq-bar-2"></span>
+                        <span class="w-1 bg-indigo-500 rounded-full eq-bar-3"></span>
+                        <span class="w-1 bg-rose-400 rounded-full eq-bar-4"></span>
+                    </div>
                 </div>
                 <div class="min-w-0 flex-1">
                     <p class="text-xs font-semibold text-slate-100 truncate" id="dockTrackTitle">Downloading track...</p>
-                    <div class="flex items-center space-x-2 text-3xs text-slate-400 mt-0.5">
+                    <div class="flex items-center space-x-2 text-3xs mt-0.5">
                         <span id="dockSpeedText" class="text-rose-400 font-mono">0%</span>
-                        <span id="dockStatusText" class="truncate">Preparing</span>
+                        <span id="dockStatusText" class="text-slate-400 truncate">Preparing</span>
                     </div>
                     <div class="w-full bg-slate-800 rounded-full h-1 mt-1 overflow-hidden">
                         <div id="dockProgressBar" class="bg-gradient-to-r from-rose-500 to-indigo-500 h-full rounded-full transition-all duration-300" style="width: 5%"></div>
                     </div>
                 </div>
             </div>
-            <button onclick="stopDownload()" class="touch-action-btn p-2 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl text-xs shrink-0" title="Stop Download">
-                <i class="fa-solid fa-stop"></i>
-            </button>
+            <div class="flex items-center space-x-1 shrink-0" id="dockActionBtnWrap">
+                <button onclick="stopDownload()" class="touch-action-btn p-2 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl text-xs" title="Stop Download">
+                    <i class="fa-solid fa-stop"></i>
+                </button>
+            </div>
         </div>
 
         <!-- Audio Preview Player Bar -->
@@ -1117,6 +1156,8 @@ HTML_TEMPLATE = """
         let allLibrarySongs = [];
         let activeDownloadingId = null;
         let downloadedIds = new Set();
+        let lastNotifiedId = null;
+        let lastNotifiedStatus = null;
 
         // Playlist Inspector Modal State
         let currentInspectedPlaylist = null;
@@ -1152,9 +1193,9 @@ HTML_TEMPLATE = """
         function showToast(message, isError = false) {
             const toastBox = document.getElementById('toastBox');
             toastBox.innerHTML = `
-                <div class="glass-panel p-3 rounded-xl shadow-2xl flex items-center space-x-3 border ${isError ? 'border-rose-500/50 bg-rose-950/80 text-rose-200' : 'border-emerald-500/50 bg-slate-900/90 text-slate-100'}">
-                    <i class="fa-solid ${isError ? 'fa-circle-exclamation text-rose-400' : 'fa-circle-check text-emerald-400'} text-base"></i>
-                    <p class="text-xs font-medium">${message}</p>
+                <div class="glass-panel p-3 rounded-xl shadow-2xl flex items-center space-x-3 border ${isError ? 'border-rose-500/80 bg-rose-950/90 text-rose-200' : 'border-emerald-500/80 bg-slate-900/95 text-slate-100'}">
+                    <i class="fa-solid ${isError ? 'fa-triangle-exclamation text-rose-400' : 'fa-circle-check text-emerald-400'} text-base"></i>
+                    <p class="text-xs font-medium leading-snug">${message}</p>
                 </div>
             `;
             toastBox.classList.remove('opacity-0', '-translate-y-4');
@@ -1163,7 +1204,7 @@ HTML_TEMPLATE = """
             setTimeout(() => {
                 toastBox.classList.add('opacity-0', '-translate-y-4');
                 toastBox.classList.remove('opacity-100', 'translate-y-0');
-            }, 3200);
+            }, 3600);
         }
 
         // Mark a song card as completed
@@ -1177,6 +1218,20 @@ HTML_TEMPLATE = """
                         <i class="fa-solid fa-circle-check"></i>
                         <span>Done</span>
                     </span>
+                `;
+            }
+        }
+
+        // Mark a song card as failed
+        function markCardAsFailed(id, error) {
+            if (!id) return;
+            const wrap = document.getElementById(`action-wrap-${id}`);
+            if (wrap) {
+                wrap.innerHTML = `
+                    <button onclick="downloadTrack('', '${id}', '', this)" class="px-2.5 py-1.5 bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 rounded-xl text-3xs font-semibold flex items-center space-x-1 shadow-sm" title="${escapeHtml(error || 'Failed')}">
+                        <i class="fa-solid fa-circle-exclamation text-rose-400"></i>
+                        <span>Failed</span>
+                    </button>
                 `;
             }
         }
@@ -1425,7 +1480,6 @@ HTML_TEMPLATE = """
             const totalBadge = document.getElementById('plModalTotalBadge');
             const list = document.getElementById('plModalTracksList');
             const selectAllCheck = document.getElementById('plSelectAllCheck');
-            const actionCount = document.getElementById('plActionCount');
             const btn = document.getElementById('plDownloadBtn');
 
             titleEl.innerText = title;
@@ -1467,7 +1521,6 @@ HTML_TEMPLATE = """
             const list = document.getElementById('plModalTracksList');
             list.innerHTML = tracks.map((tr, idx) => {
                 const isSaved = downloadedIds.has(tr.id) || tr.in_library;
-                // If saved, leave unchecked by default to prevent duplicate downloads
                 const isChecked = !isSaved;
 
                 return `
@@ -1541,7 +1594,7 @@ HTML_TEMPLATE = """
                         tracks: selectedTracks
                     })
                 });
-                const data = await res.json();
+                await res.json();
                 showToast(`Queue started for ${selectedTracks.length} tracks!`);
                 closePlaylistModal();
             } catch (err) {
@@ -1633,7 +1686,7 @@ HTML_TEMPLATE = """
             }
         }
 
-        // ================= LIBRARY MANAGEMENT =================
+        // ================= LIBRARY MANAGEMENT & BULK DELETE =================
         async function fetchLibrary() {
             const list = document.getElementById('librarySongsList');
             const summary = document.getElementById('libSummaryText');
@@ -1646,6 +1699,7 @@ HTML_TEMPLATE = """
                 allLibrarySongs = data.songs || [];
                 summary.innerText = `${data.total_count} tracks • ${data.storage_display} stored`;
                 renderLibrary(allLibrarySongs);
+                updateLibrarySelectionCount();
             } catch (err) {
                 list.innerHTML = `<div class="p-4 text-center text-rose-400 text-xs">Failed to load library: ${err.message}</div>`;
             } finally {
@@ -1665,6 +1719,7 @@ HTML_TEMPLATE = """
                 s.album.toLowerCase().includes(q)
             );
             renderLibrary(filtered);
+            updateLibrarySelectionCount();
         }
 
         function renderLibrary(songs) {
@@ -1680,18 +1735,22 @@ HTML_TEMPLATE = """
             }
 
             list.innerHTML = songs.map(song => `
-                <div class="glass-panel p-2.5 rounded-2xl flex items-center justify-between gap-3 hover:border-slate-700 transition" id="lib-song-${escapePathId(song.path)}">
+                <div class="glass-panel p-2.5 rounded-2xl flex items-center justify-between gap-2.5 hover:border-slate-700 transition" id="lib-song-${escapePathId(song.path)}">
+                    <!-- Multi-Select Checkbox -->
+                    <input type="checkbox" data-song-path="${escapeHtml(song.path)}" onchange="updateLibrarySelectionCount()"
+                        class="lib-song-check rounded border-slate-700 text-pink-600 focus:ring-0 shrink-0">
+
                     <!-- Play Preview Button -->
                     <button onclick="playSongPreview('${escapeHtml(song.path)}', '${escapeHtml(song.title)}', '${escapeHtml(song.artist)}')"
-                        class="w-9 h-9 rounded-xl bg-pink-600/20 hover:bg-pink-600 text-pink-400 hover:text-white flex items-center justify-center text-xs shrink-0 transition" title="Preview track">
+                        class="w-8 h-8 rounded-xl bg-pink-600/20 hover:bg-pink-600 text-pink-400 hover:text-white flex items-center justify-center text-xs shrink-0 transition" title="Preview track">
                         <i class="fa-solid fa-play"></i>
                     </button>
 
                     <!-- Title & Details -->
                     <div class="min-w-0 flex-1">
                         <h4 class="text-xs font-semibold text-slate-100 line-clamp-1 leading-snug break-words" title="${escapeHtml(song.title)}">${song.title}</h4>
-                        <div class="text-3xs text-slate-400 mt-0.5 flex items-center gap-2">
-                            <span class="truncate max-w-[120px]">${song.artist}</span>
+                        <div class="text-3xs text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span class="truncate max-w-[110px]">${song.artist}</span>
                             <span>•</span>
                             <span>${song.size_mb} MB</span>
                             <span>•</span>
@@ -1701,7 +1760,7 @@ HTML_TEMPLATE = """
 
                     <!-- Delete Button -->
                     <button onclick="deleteSong('${escapeHtml(song.path)}', '${escapeHtml(song.title)}')"
-                        class="touch-action-btn p-2 text-slate-500 hover:text-rose-400 transition text-xs shrink-0" title="Delete song from server">
+                        class="touch-action-btn p-1.5 text-slate-500 hover:text-rose-400 transition text-xs shrink-0" title="Delete song from server">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </div>
@@ -1710,6 +1769,71 @@ HTML_TEMPLATE = """
 
         function escapePathId(p) {
             return encodeURIComponent(p).replace(/[^a-zA-Z0-9]/g, '_');
+        }
+
+        // Library Multi-Select Helpers
+        function toggleSelectAllLibrary(checked) {
+            document.querySelectorAll('.lib-song-check').forEach(cb => cb.checked = checked);
+            updateLibrarySelectionCount();
+        }
+
+        function updateLibrarySelectionCount() {
+            const checks = document.querySelectorAll('.lib-song-check:checked');
+            const total = document.querySelectorAll('.lib-song-check').length;
+            const count = checks.length;
+
+            const bulkActions = document.getElementById('libBulkActions');
+            const badge = document.getElementById('libSelectedCountBadge');
+            const selectAllCheck = document.getElementById('libSelectAllCheck');
+
+            if (count > 0) {
+                bulkActions.classList.remove('hidden');
+                badge.innerText = `${count} of ${total} selected`;
+            } else {
+                bulkActions.classList.add('hidden');
+            }
+
+            if (selectAllCheck) {
+                selectAllCheck.checked = (total > 0 && count === total);
+            }
+        }
+
+        async function deleteSelectedLibrarySongs() {
+            const checks = Array.from(document.querySelectorAll('.lib-song-check:checked'));
+            if (checks.length === 0) return;
+
+            const paths = checks.map(cb => cb.getAttribute('data-song-path'));
+            if (!confirm(`Permanently delete ${paths.length} selected song(s) from your server?`)) return;
+
+            const btn = document.getElementById('libDeleteBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Deleting...</span>`;
+            }
+
+            try {
+                const res = await fetch('/api/library/delete_batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paths: paths })
+                });
+                const data = await res.json();
+
+                if (data.status === 'ok') {
+                    showToast(`Deleted ${data.deleted_count} tracks from library!`);
+                    allLibrarySongs = allLibrarySongs.filter(s => !paths.includes(s.path));
+                    fetchLibrary();
+                } else {
+                    showToast(data.error || "Failed to delete selected tracks", true);
+                }
+            } catch (err) {
+                showToast("Error deleting selected tracks", true);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-trash-can"></i><span>Delete Selected</span>`;
+                }
+            }
         }
 
         async function deleteSong(path, title) {
@@ -1728,6 +1852,7 @@ HTML_TEMPLATE = """
                     allLibrarySongs = allLibrarySongs.filter(s => s.path !== path);
                     const summary = document.getElementById('libSummaryText');
                     if (summary) summary.innerText = `${allLibrarySongs.length} tracks`;
+                    updateLibrarySelectionCount();
                 } else {
                     showToast(data.error || "Failed to delete song", true);
                 }
@@ -1781,29 +1906,79 @@ HTML_TEMPLATE = """
             checkDockVisibility();
         }
 
-        // ================= FLOATING DOCK & STATUS =================
+        // ================= FLOATING DOCK & LIVE STATUS =================
         function updateDownloadDock(dl) {
             const dock = document.getElementById('floatingDock');
             const bar = document.getElementById('activeDownloadBar');
+            const eqWrap = document.getElementById('dockEqContainer');
             const title = document.getElementById('dockTrackTitle');
             const speed = document.getElementById('dockSpeedText');
             const status = document.getElementById('dockStatusText');
             const progress = document.getElementById('dockProgressBar');
+            const actionBtnWrap = document.getElementById('dockActionBtnWrap');
 
             const isDone = dl.status === 'completed' || dl.percent >= 100;
-            
-            title.innerText = dl.queue_text ? `[${dl.queue_text}] ${dl.title}` : (dl.title || "Downloading track...");
-            speed.innerText = isDone ? "✓ 100%" : `${Math.round(dl.percent)}%`;
-            status.innerText = isDone ? "Completed! Added to library" : (dl.speed || dl.status || 'Downloading...');
-            progress.style.width = isDone ? "100%" : `${Math.max(5, dl.percent)}%`;
+            const isFailed = dl.status === 'failed';
+
+            if (isFailed) {
+                bar.className = "glass-panel p-2.5 rounded-2xl shadow-2xl border border-rose-500/80 bg-rose-950/70 flex items-center justify-between gap-2.5";
+                eqWrap.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-400 text-sm"></i>';
+                title.innerText = dl.title ? `Failed: ${dl.title}` : "Download Error";
+                speed.innerText = "Error";
+                speed.className = "text-rose-400 font-bold font-mono text-3xs";
+                status.innerText = dl.error || dl.message || "Download failed. Please check Auth tab.";
+                status.className = "text-rose-200 text-3xs truncate";
+                progress.style.width = "100%";
+                progress.className = "bg-rose-500 h-full rounded-full";
+                actionBtnWrap.innerHTML = `
+                    <button onclick="switchTab('cookies')" class="touch-action-btn px-2 py-1 bg-amber-600 text-white rounded-lg text-3xs font-semibold">Auth</button>
+                    <button onclick="hideDownloadDock()" class="touch-action-btn p-1 text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+                `;
+            } else if (isDone) {
+                bar.className = "glass-panel p-2.5 rounded-2xl shadow-2xl border border-emerald-500/60 bg-slate-900/95 flex items-center justify-between gap-2.5";
+                eqWrap.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>';
+                title.innerText = dl.title || "Track Downloaded";
+                speed.innerText = "✓ 100%";
+                speed.className = "text-emerald-400 font-bold font-mono text-3xs";
+                status.innerText = "Saved to library!";
+                status.className = "text-emerald-300 text-3xs truncate";
+                progress.style.width = "100%";
+                progress.className = "bg-emerald-500 h-full rounded-full";
+                actionBtnWrap.innerHTML = `
+                    <button onclick="hideDownloadDock()" class="touch-action-btn p-1 text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+                `;
+            } else {
+                bar.className = "glass-panel p-2.5 rounded-2xl shadow-2xl border border-rose-500/30 flex items-center justify-between gap-2.5";
+                eqWrap.innerHTML = `
+                    <div class="flex items-end space-x-0.5 h-3.5">
+                        <span class="w-1 bg-rose-500 rounded-full eq-bar-1"></span>
+                        <span class="w-1 bg-pink-500 rounded-full eq-bar-2"></span>
+                        <span class="w-1 bg-indigo-500 rounded-full eq-bar-3"></span>
+                        <span class="w-1 bg-rose-400 rounded-full eq-bar-4"></span>
+                    </div>
+                `;
+                title.innerText = dl.queue_text ? `[${dl.queue_text}] ${dl.title}` : (dl.title || "Downloading track...");
+                speed.innerText = `${Math.round(dl.percent)}%`;
+                speed.className = "text-rose-400 font-mono text-3xs";
+                status.innerText = dl.speed || dl.status || 'Downloading...';
+                status.className = "text-slate-400 text-3xs truncate";
+                progress.style.width = `${Math.max(5, dl.percent)}%`;
+                progress.className = "bg-gradient-to-r from-rose-500 to-indigo-500 h-full rounded-full transition-all duration-300";
+                actionBtnWrap.innerHTML = `
+                    <button onclick="stopDownload()" class="touch-action-btn p-2 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl text-xs" title="Stop Download">
+                        <i class="fa-solid fa-stop"></i>
+                    </button>
+                `;
+            }
 
             dock.classList.remove('hidden');
             bar.classList.remove('hidden');
 
-            // In-card update if present
             if (dl.id) {
                 if (isDone) {
                     markCardAsCompleted(dl.id);
+                } else if (isFailed) {
+                    markCardAsFailed(dl.id, dl.error);
                 } else {
                     const cardPct = document.getElementById(`card-pct-${dl.id}`);
                     const cardBar = document.getElementById(`card-bar-${dl.id}`);
@@ -1876,7 +2051,6 @@ HTML_TEMPLATE = """
                         downloadedIds.add(id);
                         markCardAsCompleted(id);
                         
-                        // Also update in playlist inspector modal if open
                         const plStatus = document.getElementById(`pl-track-status-${id}`);
                         if (plStatus) {
                             plStatus.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check"></i> Done</span>`;
@@ -1895,16 +2069,34 @@ HTML_TEMPLATE = """
                     }
                 }
 
-                // 3. Process active download
+                // 3. Process active or completed or failed download
                 if (d.current_download && d.current_download.status !== 'idle') {
                     const dl = d.current_download;
+                    
                     if (dl.status === 'completed' || dl.percent >= 100) {
                         if (dl.id) markCardAsCompleted(dl.id);
                         updateDownloadDock(dl);
-                        // Hide dock after 4 seconds
+                        
+                        // Single completion notification
+                        if (lastNotifiedId !== dl.id || lastNotifiedStatus !== 'completed') {
+                            lastNotifiedId = dl.id;
+                            lastNotifiedStatus = 'completed';
+                            showToast(`🎉 "${dl.title}" downloaded and saved!`);
+                        }
+
                         setTimeout(() => {
-                            if (!d.is_syncing) hideDownloadDock();
+                            if (!d.is_syncing && dl.status === 'completed') hideDownloadDock();
                         }, 4000);
+                    } else if (dl.status === 'failed') {
+                        if (dl.id) markCardAsFailed(dl.id, dl.error);
+                        updateDownloadDock(dl);
+
+                        // Single failure notification
+                        if (lastNotifiedId !== dl.id || lastNotifiedStatus !== 'failed') {
+                            lastNotifiedId = dl.id;
+                            lastNotifiedStatus = 'failed';
+                            showToast(`❌ Failed: ${dl.error || dl.title}`, true);
+                        }
                     } else if (d.is_syncing) {
                         activeDownloadingId = dl.id || dl.url;
                         updateDownloadDock(dl);
@@ -2022,7 +2214,6 @@ def api_library_delete():
         
     try:
         os.remove(full_path)
-        # Clean empty folders
         parent = os.path.dirname(full_path)
         lib_root = os.path.realpath(LIBRARY_DIR)
         while parent != lib_root and os.path.exists(parent):
@@ -2034,6 +2225,44 @@ def api_library_delete():
         return jsonify({"status": "ok", "deleted": rel_path})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/library/delete_batch", methods=["POST"])
+def api_library_delete_batch():
+    paths = []
+    data = request.get_json(silent=True)
+    if data and isinstance(data, dict) and "paths" in data:
+        paths = data.get("paths", [])
+    elif request.form.getlist("paths[]"):
+        paths = request.form.getlist("paths[]")
+    elif request.form.get("paths"):
+        try:
+            paths = json.loads(request.form.get("paths"))
+        except Exception:
+            paths = [request.form.get("paths")]
+            
+    if not paths:
+        return jsonify({"error": "No paths provided"}), 400
+        
+    deleted_count = 0
+    lib_root = os.path.realpath(LIBRARY_DIR)
+    
+    for rel_path in paths:
+        full_path = os.path.realpath(os.path.join(LIBRARY_DIR, rel_path))
+        if full_path.startswith(lib_root) and os.path.exists(full_path):
+            try:
+                os.remove(full_path)
+                deleted_count += 1
+                parent = os.path.dirname(full_path)
+                while parent != lib_root and os.path.exists(parent):
+                    if not os.listdir(parent):
+                        os.rmdir(parent)
+                        parent = os.path.dirname(parent)
+                    else:
+                        break
+            except Exception:
+                pass
+                
+    return jsonify({"status": "ok", "deleted_count": deleted_count})
 
 @app.route("/api/library/stream")
 def api_library_stream():
