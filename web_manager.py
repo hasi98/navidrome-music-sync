@@ -21,6 +21,8 @@ COOKIES_FILE = os.path.join(MUSIC_DIR, "cookies.txt")
 sync_lock = threading.Lock()
 download_lock = threading.Lock()
 is_syncing = False
+abort_queue = False
+completed_download_ids = set()
 
 current_download = {
     "url": "",
@@ -30,8 +32,41 @@ current_download = {
     "speed": "",
     "eta": "",
     "status": "idle",  # "idle", "starting", "downloading", "converting", "finalizing", "completed", "failed", "cancelled"
-    "message": ""
+    "message": "",
+    "queue_text": "",
+    "playlist_title": ""
 }
+
+playlist_queue = {
+    "is_active": False,
+    "title": "",
+    "total": 0,
+    "current_index": 0,
+    "current_id": "",
+    "completed_ids": [],
+    "failed_ids": []
+}
+
+def get_library_titles():
+    titles = set()
+    if os.path.exists(LIBRARY_DIR):
+        for root, dirs, files in os.walk(LIBRARY_DIR):
+            for file in files:
+                if file.lower().endswith((".mp3", ".m4a", ".flac", ".opus", ".ogg")):
+                    title = os.path.splitext(file)[0].lower()
+                    titles.add(title)
+    return titles
+
+def is_track_in_library(track_title):
+    clean = re.sub(r"[^\w\s]", "", track_title.lower()).strip()
+    if not clean:
+        return False
+    lib_titles = get_library_titles()
+    for lt in lib_titles:
+        clean_lt = re.sub(r"[^\w\s]", "", lt).strip()
+        if clean in clean_lt or clean_lt in clean:
+            return True
+    return False
 
 def run_sync_thread():
     global is_syncing
@@ -50,8 +85,8 @@ def trigger_sync_async():
         return True
     return False
 
-def run_single_download(url, title="", video_id=""):
-    global is_syncing, current_download
+def run_single_download(url, title="", video_id="", queue_info=None):
+    global is_syncing, current_download, completed_download_ids
     with sync_lock:
         is_syncing = True
         
@@ -70,7 +105,9 @@ def run_single_download(url, title="", video_id=""):
                 "speed": "Starting...",
                 "eta": "",
                 "status": "starting",
-                "message": "Initializing download..."
+                "message": "Initializing download...",
+                "queue_text": f"Track {queue_info['current']} of {queue_info['total']}" if queue_info else "",
+                "playlist_title": queue_info.get("playlist_title", "") if queue_info else ""
             })
 
         try:
@@ -103,7 +140,7 @@ def run_single_download(url, title="", video_id=""):
             
             with open(LOG_FILE, "a", encoding="utf-8") as f:
                 now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                f.write(f"\n==========================================\nDownloading single track: {clean_url}\nStarted at: {now_str}\n")
+                f.write(f"\n==========================================\nDownloading track: {clean_url}\nStarted at: {now_str}\n")
                 f.flush()
 
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
@@ -154,28 +191,33 @@ def run_single_download(url, title="", video_id=""):
                 end_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
                 if ret == 0:
-                    f.write(f"✓ Single track downloaded successfully at: {end_str}\n==========================================\n")
+                    f.write(f"✓ Track downloaded successfully at: {end_str}\n==========================================\n")
                     with download_lock:
                         current_download["status"] = "completed"
                         current_download["percent"] = 100.0
                         current_download["speed"] = "Completed!"
+                        if video_id:
+                            completed_download_ids.add(video_id)
+                    return True
                 else:
                     f.write(f"❌ Download failed (code {ret}) at: {end_str}\n==========================================\n")
                     with download_lock:
                         current_download["status"] = "failed"
                         current_download["message"] = f"Failed with code {ret}"
+                    return False
         except Exception as e:
             with open(LOG_FILE, "a", encoding="utf-8") as f:
-                f.write(f"Error during single download: {e}\n")
+                f.write(f"Error during download: {e}\n")
             with download_lock:
                 current_download["status"] = "failed"
                 current_download["message"] = str(e)
+            return False
         finally:
             is_syncing = False
-            # Reset idle status after delay
+            # Retain completed state for 8 seconds before resetting to idle
             def reset_idle():
                 import time
-                time.sleep(6)
+                time.sleep(8)
                 with download_lock:
                     if current_download["status"] in ("completed", "failed", "cancelled"):
                         current_download["status"] = "idle"
@@ -191,17 +233,62 @@ def trigger_single_download_async(url, title="", video_id=""):
         return True
     return False
 
+def run_playlist_download_queue(tracks, playlist_title):
+    global is_syncing, abort_queue, playlist_queue, completed_download_ids
+    abort_queue = False
+    with download_lock:
+        playlist_queue["is_active"] = True
+        playlist_queue["title"] = playlist_title
+        playlist_queue["total"] = len(tracks)
+        playlist_queue["current_index"] = 0
+        playlist_queue["completed_ids"] = []
+        playlist_queue["failed_ids"] = []
+
+    try:
+        for idx, tr in enumerate(tracks):
+            if abort_queue:
+                break
+            with download_lock:
+                playlist_queue["current_index"] = idx + 1
+                playlist_queue["current_id"] = tr["id"]
+
+            success = run_single_download(
+                tr["url"],
+                title=tr["title"],
+                video_id=tr["id"],
+                queue_info={"current": idx + 1, "total": len(tracks), "playlist_title": playlist_title}
+            )
+            with download_lock:
+                if success:
+                    playlist_queue["completed_ids"].append(tr["id"])
+                    completed_download_ids.add(tr["id"])
+                else:
+                    playlist_queue["failed_ids"].append(tr["id"])
+    finally:
+        with download_lock:
+            playlist_queue["is_active"] = False
+
+def trigger_playlist_queue_async(tracks, playlist_title):
+    global is_syncing
+    if not is_syncing:
+        t = threading.Thread(target=run_playlist_download_queue, args=(tracks, playlist_title), daemon=True)
+        t.start()
+        return True
+    return False
+
 def stop_sync_process():
-    global is_syncing, current_download
+    global is_syncing, current_download, abort_queue, playlist_queue
+    abort_queue = True
     try:
         subprocess.run(["pkill", "-9", "-f", "yt-dlp"], check=False)
         subprocess.run(["pkill", "-9", "-f", "sync.sh"], check=False)
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            f.write(f"\n==========================================\n[CANCELLED] Download process stopped by user via Web UI at {now_str}\n==========================================\n")
+            f.write(f"\n==========================================\n[CANCELLED] Download stopped by user at {now_str}\n==========================================\n")
         with download_lock:
             current_download["status"] = "cancelled"
             current_download["speed"] = "Cancelled"
+            playlist_queue["is_active"] = False
     except Exception as e:
         print("Error stopping sync:", e)
     finally:
@@ -267,6 +354,53 @@ def search_youtube(query, limit=40):
             for sec in contents:
                 item_sec = sec.get("itemSectionRenderer", {}).get("contents", [])
                 for item in item_sec:
+                    # 1. New YouTube 2024 lockupViewModel (Handles Playlists, Mixes & Videos!)
+                    lvm = item.get("lockupViewModel")
+                    if lvm:
+                        c_type = lvm.get("contentType", "")
+                        c_id = lvm.get("contentId", "")
+                        meta = lvm.get("metadata", {}).get("lockupMetadataViewModel", {})
+                        title = meta.get("title", {}).get("content", "")
+                        
+                        rows = meta.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", [])
+                        author = ""
+                        duration = ""
+                        for r in rows:
+                            parts = r.get("metadataParts", [])
+                            for p in parts:
+                                text = p.get("text", {}).get("content", "")
+                                if (":" in text or "video" in text.lower()) and not duration:
+                                    duration = text
+                                elif not author:
+                                    author = text
+                                    
+                        img = lvm.get("contentImage", {})
+                        sources = img.get("thumbnailViewModel", {}).get("image", {}).get("sources", [])
+                        if not sources:
+                            sources = img.get("collectionThumbnailViewModel", {}).get("primaryThumbnail", {}).get("thumbnailViewModel", {}).get("image", {}).get("sources", [])
+                        thumb = sources[-1].get("url") if sources else f"https://i.ytimg.com/vi/{c_id}/hqdefault.jpg"
+                        
+                        is_pl = "PLAYLIST" in c_type or c_id.startswith("PL") or c_id.startswith("OL")
+                        is_rd = "RADIO" in c_type or c_id.startswith("RD") or "mix" in title.lower()
+                        cat = "radio" if is_rd else ("playlist" if is_pl else "song")
+                        
+                        if c_id and title:
+                            items.append({
+                                "type": "playlist" if is_pl else ("radio" if is_rd else "video"),
+                                "category": cat,
+                                "id": c_id,
+                                "title": title,
+                                "channel": author,
+                                "duration": duration,
+                                "thumbnail": thumb,
+                                "url": f"https://www.youtube.com/playlist?list={c_id}" if is_pl else f"https://www.youtube.com/watch?v={c_id}",
+                                "in_library": (c_id in completed_download_ids) or is_track_in_library(title)
+                            })
+                        if len(items) >= limit:
+                            break
+                        continue
+
+                    # 2. Classic Video Renderer
                     vr = item.get("videoRenderer")
                     pr = item.get("playlistRenderer")
                     rr = item.get("radioRenderer")
@@ -281,7 +415,6 @@ def search_youtube(query, limit=40):
                         badges = [b.get("metadataBadgeRenderer", {}).get("label", "") for b in vr.get("badges", [])]
                         is_live = any("LIVE" in b.upper() for b in badges)
                         
-                        # Category detection: song vs radio
                         cat = "song"
                         title_lower = title.lower()
                         if is_live or "radio" in title_lower or "24/7" in title_lower or ("lofi" in title_lower and "live" in title_lower):
@@ -296,7 +429,8 @@ def search_youtube(query, limit=40):
                                 "channel": author,
                                 "duration": duration if not is_live else "LIVE",
                                 "thumbnail": thumb,
-                                "url": f"https://www.youtube.com/watch?v={video_id}"
+                                "url": f"https://www.youtube.com/watch?v={video_id}",
+                                "in_library": (video_id in completed_download_ids) or is_track_in_library(title)
                             })
                     elif rr:
                         pl_id = rr.get("playlistId")
@@ -314,7 +448,8 @@ def search_youtube(query, limit=40):
                                 "channel": author or "YouTube Mix",
                                 "duration": count,
                                 "thumbnail": thumb,
-                                "url": f"https://www.youtube.com/watch?v={pl_id}&list={pl_id}"
+                                "url": f"https://www.youtube.com/watch?v={pl_id}&list={pl_id}",
+                                "in_library": False
                             })
                     elif pr:
                         pl_id = pr.get("playlistId", "")
@@ -336,7 +471,8 @@ def search_youtube(query, limit=40):
                                 "channel": author,
                                 "duration": f"{count} videos" if count else ("Mix" if is_radio else "Playlist"),
                                 "thumbnail": thumb,
-                                "url": f"https://www.youtube.com/playlist?list={pl_id}" if not is_radio else f"https://www.youtube.com/watch?v={pl_id}&list={pl_id}"
+                                "url": f"https://www.youtube.com/playlist?list={pl_id}" if not is_radio else f"https://www.youtube.com/watch?v={pl_id}&list={pl_id}",
+                                "in_library": False
                             })
                     if len(items) >= limit:
                         break
@@ -377,7 +513,8 @@ def search_youtube(query, limit=40):
                         "channel": e.get("uploader") or e.get("channel") or "",
                         "duration": dur_str,
                         "thumbnail": f"https://i.ytimg.com/vi/{v_id}/hqdefault.jpg",
-                        "url": e.get("url") if e.get("url", "").startswith("http") else f"https://www.youtube.com/watch?v={v_id}"
+                        "url": e.get("url") if e.get("url", "").startswith("http") else f"https://www.youtube.com/watch?v={v_id}",
+                        "in_library": (v_id in completed_download_ids) or is_track_in_library(v_title)
                     })
             if items:
                 return items
@@ -385,6 +522,57 @@ def search_youtube(query, limit=40):
         print("yt-dlp fallback search error:", e)
 
     return []
+
+def inspect_playlist(url):
+    cookie_arg = []
+    if os.path.exists(COOKIES_FILE) and os.path.getsize(COOKIES_FILE) > 10:
+        cookie_arg = ["--cookies", COOKIES_FILE]
+        
+    cmd = [
+        "/usr/local/bin/yt-dlp",
+        *cookie_arg,
+        "--flat-playlist",
+        "--dump-single-json",
+        url
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=25)
+    if (res.returncode != 0 or not res.stdout.strip()) and cookie_arg:
+        cmd_no_cookies = ["/usr/local/bin/yt-dlp", "--flat-playlist", "--dump-single-json", url]
+        res = subprocess.run(cmd_no_cookies, capture_output=True, text=True, timeout=25)
+
+    if res.stdout:
+        try:
+            data = json.loads(res.stdout)
+            title = data.get("title") or "YouTube Playlist"
+            entries = data.get("entries") or []
+            tracks = []
+            for e in entries:
+                v_id = e.get("id")
+                v_title = e.get("title")
+                if v_id and v_title:
+                    duration_sec = e.get("duration") or 0
+                    mins = int(duration_sec // 60)
+                    secs = int(duration_sec % 60)
+                    dur_str = f"{mins}:{secs:02d}" if duration_sec else ""
+                    in_lib = (v_id in completed_download_ids) or is_track_in_library(v_title)
+                    tracks.append({
+                        "id": v_id,
+                        "title": v_title,
+                        "uploader": e.get("uploader") or e.get("channel") or "",
+                        "duration": dur_str,
+                        "thumbnail": f"https://i.ytimg.com/vi/{v_id}/hqdefault.jpg",
+                        "url": f"https://www.youtube.com/watch?v={v_id}",
+                        "in_library": in_lib
+                    })
+            return {
+                "id": data.get("id") or "",
+                "title": title,
+                "total": len(tracks),
+                "tracks": tracks
+            }
+        except Exception as err:
+            print("Error parsing playlist inspection:", err)
+    return None
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -423,7 +611,6 @@ HTML_TEMPLATE = """
             -webkit-tap-highlight-color: transparent;
             user-select: none;
         }
-        /* Custom scrollbar */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
@@ -438,7 +625,6 @@ HTML_TEMPLATE = """
         .touch-action-btn:active {
             transform: scale(0.95);
         }
-        /* Equalizer visualizer animation */
         @keyframes eq-dance {
             0%, 100% { height: 3px; }
             50% { height: 13px; }
@@ -640,25 +826,26 @@ HTML_TEMPLATE = """
                     </div>
                     <h2 class="text-xs sm:text-sm font-semibold text-slate-200">Add YouTube Link</h2>
                 </div>
-                <p class="text-3xs text-slate-400">Queue an individual track, an album, or a full recurring YouTube playlist.</p>
+                <p class="text-3xs text-slate-400">Paste any song or playlist link. Choose to preview & select tracks or queue the whole source.</p>
 
-                <form id="directAddForm" onsubmit="submitDirectLink(event)" class="space-y-2.5">
+                <div class="space-y-2.5">
                     <div>
                         <input type="url" id="directUrlInput" placeholder="https://www.youtube.com/playlist?list=... or watch URL" required
                             class="w-full px-3 py-2 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
                     </div>
-                    <div class="flex items-center justify-between pt-1">
-                        <label class="flex items-center space-x-2 text-3xs text-slate-300 cursor-pointer">
-                            <input type="checkbox" id="directSyncNow" checked class="rounded border-slate-700 text-indigo-600 focus:ring-0">
-                            <span>Download immediately</span>
-                        </label>
-                        <button type="submit" id="directAddBtn"
-                            class="touch-action-btn px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl shadow transition flex items-center space-x-1.5">
+                    <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                        <button type="button" onclick="inspectDirectUrl()" id="directInspectBtn"
+                            class="touch-action-btn flex-1 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700/70 text-indigo-400 font-semibold text-3xs rounded-xl shadow transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-list-check"></i>
+                            <span>Inspect & Select Tracks</span>
+                        </button>
+                        <button type="button" onclick="submitDirectLink(event)" id="directAddBtn"
+                            class="touch-action-btn flex-1 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-3xs rounded-xl shadow transition flex items-center justify-center space-x-1.5">
                             <i class="fa-solid fa-plus"></i>
-                            <span>Queue</span>
+                            <span>Queue All Directly</span>
                         </button>
                     </div>
-                </form>
+                </div>
             </div>
 
             <!-- Tracked Playlists List -->
@@ -686,9 +873,14 @@ HTML_TEMPLATE = """
                                 <i class="fa-brands fa-youtube text-rose-500 text-xs shrink-0"></i>
                                 <span class="truncate font-mono text-3xs">{{ pl }}</span>
                             </div>
-                            <button onclick="deletePlaylist('{{ pl }}')" class="touch-action-btn text-slate-500 hover:text-rose-400 p-1.5 transition text-xs shrink-0" title="Remove link">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
+                            <div class="flex items-center space-x-1 shrink-0">
+                                <button onclick="openPlaylistModal('{{ pl }}', 'Tracked Playlist')" class="touch-action-btn text-indigo-400 hover:text-indigo-300 p-1.5 transition text-xs" title="Inspect Tracks">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                                <button onclick="deletePlaylist('{{ pl }}')" class="touch-action-btn text-slate-500 hover:text-rose-400 p-1.5 transition text-xs" title="Remove link">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
                         </div>
                         {% endfor %}
                     {% else %}
@@ -723,6 +915,11 @@ HTML_TEMPLATE = """
                 <p class="text-3xs text-slate-400 leading-relaxed">
                     YouTube blocks cloud datacenter IPs with <i>"Sign in to confirm you're not a bot"</i>. Pasting your browser cookies bypasses this permanently.
                 </p>
+
+                <div class="bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-xl text-3xs text-amber-300 space-y-1">
+                    <p class="font-bold">⚠️ Critical tip for exporting cookies:</p>
+                    <p>Make sure you are on <b class="underline">https://www.youtube.com</b> logged in when you export. The export must contain the <code>LOGIN_INFO</code> or <code>SAPISID</code> session cookie.</p>
+                </div>
 
                 <form action="/cookies" method="POST" enctype="multipart/form-data" class="space-y-3">
                     <div>
@@ -777,12 +974,60 @@ HTML_TEMPLATE = """
 
     </main>
 
+    <!-- Interactive Playlist Track Selector Modal / Bottom Sheet -->
+    <div id="playlistModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-all duration-300">
+        <div class="glass-panel w-full max-w-xl rounded-t-3xl sm:rounded-3xl border border-slate-700 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="min-w-0 flex-1 pr-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-1.5 py-0.5 rounded text-3xs font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">Playlist</span>
+                        <span id="plModalTotalBadge" class="text-3xs text-slate-400">Loading tracks...</span>
+                    </div>
+                    <h3 id="plModalTitle" class="text-sm font-bold text-white truncate mt-1">Playlist Tracks</h3>
+                </div>
+                <button onclick="closePlaylistModal()" class="touch-action-btn w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Selection & Search Toolbar -->
+            <div class="px-4 py-2.5 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between gap-2 text-2xs">
+                <label class="flex items-center space-x-2 text-slate-300 cursor-pointer select-none">
+                    <input type="checkbox" id="plSelectAllCheck" onchange="toggleSelectAllPlaylist(this.checked)" checked class="rounded border-slate-700 text-rose-600 focus:ring-0">
+                    <span id="plSelectionSummary">Select All</span>
+                </label>
+                <span id="plSelectedCountText" class="text-rose-400 font-mono font-medium">0 selected</span>
+            </div>
+
+            <!-- Modal Scrollable Track List -->
+            <div id="plModalTracksList" class="p-3 space-y-2 overflow-y-auto flex-1 min-h-[220px]">
+                <div class="p-8 text-center text-slate-400 text-xs">
+                    <i class="fa-solid fa-spinner fa-spin text-indigo-500 text-xl mb-2 block"></i>
+                    Fetching playlist tracks...
+                </div>
+            </div>
+
+            <!-- Modal Sticky Action Footer -->
+            <div class="p-3 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between gap-3">
+                <button onclick="closePlaylistModal()" class="touch-action-btn px-3 py-2 text-slate-400 hover:text-slate-200 text-xs font-semibold">
+                    Close
+                </button>
+                <button onclick="downloadSelectedPlaylistTracks()" id="plDownloadBtn"
+                    class="touch-action-btn flex-1 py-2.5 px-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span id="plDownloadBtnText">Download Selected Tracks</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Floating Active Download & Audio Dock (Sits above bottom bar) -->
     <div id="floatingDock" class="fixed bottom-16 left-1/2 -translate-x-1/2 w-11/12 max-w-xl z-40 hidden transition-all duration-300">
         <!-- Download Status Card -->
         <div id="activeDownloadBar" class="glass-panel p-2.5 rounded-2xl shadow-2xl border border-rose-500/30 flex items-center justify-between gap-2.5 hidden">
             <div class="flex items-center space-x-2 min-w-0 flex-1">
-                <div class="flex items-end space-x-0.5 h-3.5 shrink-0 px-1">
+                <div class="flex items-end space-x-0.5 h-3.5 shrink-0 px-1" id="dockEqContainer">
                     <span class="w-1 bg-rose-500 rounded-full eq-bar-1"></span>
                     <span class="w-1 bg-pink-500 rounded-full eq-bar-2"></span>
                     <span class="w-1 bg-indigo-500 rounded-full eq-bar-3"></span>
@@ -871,6 +1116,10 @@ HTML_TEMPLATE = """
         
         let allLibrarySongs = [];
         let activeDownloadingId = null;
+        let downloadedIds = new Set();
+
+        // Playlist Inspector Modal State
+        let currentInspectedPlaylist = null;
 
         // Tab Switching
         function switchTab(tabName) {
@@ -914,7 +1163,22 @@ HTML_TEMPLATE = """
             setTimeout(() => {
                 toastBox.classList.add('opacity-0', '-translate-y-4');
                 toastBox.classList.remove('opacity-100', 'translate-y-0');
-            }, 3000);
+            }, 3200);
+        }
+
+        // Mark a song card as completed
+        function markCardAsCompleted(id) {
+            if (!id) return;
+            downloadedIds.add(id);
+            const wrap = document.getElementById(`action-wrap-${id}`);
+            if (wrap) {
+                wrap.innerHTML = `
+                    <span class="done-badge px-2.5 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-3xs font-semibold flex items-center space-x-1 shadow-sm">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>Done</span>
+                    </span>
+                `;
+            }
         }
 
         // Search Filter (All / Songs / Playlists / Radios)
@@ -950,13 +1214,45 @@ HTML_TEMPLATE = """
             displayedCount += nextBatch.length;
 
             const html = nextBatch.map(item => {
+                const isCompleted = downloadedIds.has(item.id) || item.in_library;
                 const isDownloadingThis = activeDownloadingId && (activeDownloadingId === item.id || activeDownloadingId === item.url);
+                const isPlaylist = item.category === 'playlist' || item.type === 'playlist';
+
+                let actionHtml = '';
+                if (isCompleted) {
+                    actionHtml = `
+                        <span class="done-badge px-2.5 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-3xs font-semibold flex items-center space-x-1 shadow-sm">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span>Saved</span>
+                        </span>
+                    `;
+                } else if (isDownloadingThis) {
+                    actionHtml = renderInCardProgress(item);
+                } else if (isPlaylist) {
+                    actionHtml = `
+                        <button onclick="openPlaylistModal('${item.url}', '${escapeHtml(item.title)}')"
+                            class="touch-action-btn px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-3xs rounded-xl shadow-md transition flex items-center space-x-1 shrink-0">
+                            <i class="fa-solid fa-list-check"></i>
+                            <span>Tracks</span>
+                        </button>
+                    `;
+                } else {
+                    actionHtml = `
+                        <button onclick="downloadTrack('${item.url}', '${item.id}', '${escapeHtml(item.title)}', this)"
+                            class="touch-action-btn px-3 py-1.5 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-semibold text-3xs rounded-xl shadow-md transition flex items-center space-x-1 shrink-0">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Get</span>
+                        </button>
+                    `;
+                }
+
                 return `
                 <div class="glass-panel p-2.5 rounded-2xl flex items-center justify-between gap-3 hover:border-slate-700 transition relative" id="search-card-${item.id}">
                     <!-- Left: Square Thumbnail -->
                     <div class="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-950 border border-slate-800">
                         <img src="${item.thumbnail}" alt="" class="w-full h-full object-cover" loading="lazy">
                         ${item.duration ? `<span class="absolute bottom-1 right-1 bg-black/85 text-white text-3xs px-1 py-0.2 rounded font-mono font-medium">${item.duration}</span>` : ''}
+                        ${isPlaylist ? `<div class="absolute inset-0 bg-black/40 flex items-center justify-center"><i class="fa-solid fa-list text-white text-xs"></i></div>` : ''}
                     </div>
 
                     <!-- Center: Full Title (2 Lines) & Metadata -->
@@ -974,13 +1270,7 @@ HTML_TEMPLATE = """
 
                     <!-- Right: Download Action / Visualizer Progress -->
                     <div class="shrink-0 flex items-center" id="action-wrap-${item.id}">
-                        ${isDownloadingThis ? renderInCardProgress(item) : `
-                            <button onclick="downloadTrack('${item.url}', '${item.id}', '${escapeHtml(item.title)}', this)"
-                                class="touch-action-btn px-3 py-1.5 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-semibold text-3xs rounded-xl shadow-md transition flex items-center space-x-1 shrink-0">
-                                <i class="fa-solid fa-download"></i>
-                                <span>Get</span>
-                            </button>
-                        `}
+                        ${actionHtml}
                     </div>
                 </div>
             `}).join('');
@@ -1004,7 +1294,7 @@ HTML_TEMPLATE = """
                             <span class="w-0.5 bg-pink-500 rounded-full eq-bar-2"></span>
                             <span class="w-0.5 bg-indigo-500 rounded-full eq-bar-3"></span>
                         </div>
-                        <span id="card-pct-${item.id}">...</span>
+                        <span id="card-pct-${item.id}">5%</span>
                     </div>
                     <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                         <div id="card-bar-${item.id}" class="bg-gradient-to-r from-rose-500 to-indigo-500 h-full rounded-full transition-all duration-300" style="width: 15%"></div>
@@ -1100,7 +1390,7 @@ HTML_TEMPLATE = """
             displayedCount = 0;
         }
 
-        // Download Action
+        // Single Track Download Action
         async function downloadTrack(url, id, title, btnElement) {
             activeDownloadingId = id;
             if (btnElement) {
@@ -1128,11 +1418,158 @@ HTML_TEMPLATE = """
             }
         }
 
+        // ================= PLAYLIST INSPECTOR & SELECTIVE DOWNLOAD =================
+        async function openPlaylistModal(url, title = 'Playlist Tracks') {
+            const modal = document.getElementById('playlistModal');
+            const titleEl = document.getElementById('plModalTitle');
+            const totalBadge = document.getElementById('plModalTotalBadge');
+            const list = document.getElementById('plModalTracksList');
+            const selectAllCheck = document.getElementById('plSelectAllCheck');
+            const actionCount = document.getElementById('plActionCount');
+            const btn = document.getElementById('plDownloadBtn');
+
+            titleEl.innerText = title;
+            totalBadge.innerText = "Inspecting tracks...";
+            modal.classList.remove('hidden');
+            selectAllCheck.checked = true;
+            btn.disabled = false;
+
+            list.innerHTML = `
+                <div class="p-8 text-center text-slate-400 text-xs">
+                    <i class="fa-solid fa-spinner fa-spin text-indigo-500 text-xl mb-2 block"></i>
+                    Scanning playlist tracks...
+                </div>
+            `;
+
+            try {
+                const res = await fetch(`/api/playlist/inspect?url=${encodeURIComponent(url)}`);
+                const data = await res.json();
+
+                if (!data || !data.tracks || data.tracks.length === 0) {
+                    list.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs">Could not load playlist tracks. Make sure playlist is public or unlisted.</div>`;
+                    totalBadge.innerText = "0 tracks";
+                    return;
+                }
+
+                currentInspectedPlaylist = data;
+                titleEl.innerText = data.title;
+                totalBadge.innerText = `${data.total} tracks total`;
+
+                renderPlaylistTracks(data.tracks);
+                updatePlaylistSelectionCount();
+
+            } catch (err) {
+                list.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs">Error inspecting playlist: ${err.message}</div>`;
+            }
+        }
+
+        function renderPlaylistTracks(tracks) {
+            const list = document.getElementById('plModalTracksList');
+            list.innerHTML = tracks.map((tr, idx) => {
+                const isSaved = downloadedIds.has(tr.id) || tr.in_library;
+                // If saved, leave unchecked by default to prevent duplicate downloads
+                const isChecked = !isSaved;
+
+                return `
+                <div class="glass-panel p-2 rounded-xl flex items-center justify-between gap-2.5 hover:border-slate-700 transition" id="pl-track-row-${tr.id}">
+                    <input type="checkbox" data-track-id="${tr.id}" data-idx="${idx}" ${isChecked ? 'checked' : ''}
+                        onchange="updatePlaylistSelectionCount()" class="pl-track-check rounded border-slate-700 text-rose-600 focus:ring-0 shrink-0">
+
+                    <div class="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-950 border border-slate-800">
+                        <img src="${tr.thumbnail}" alt="" class="w-full h-full object-cover">
+                        ${tr.duration ? `<span class="absolute bottom-0.5 right-0.5 bg-black/80 text-white text-3xs px-1 rounded font-mono">${tr.duration}</span>` : ''}
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-semibold text-slate-100 line-clamp-1 leading-snug break-words">${tr.title}</p>
+                        <div class="text-3xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+                            <span class="truncate max-w-[120px]">${tr.uploader}</span>
+                            ${isSaved ? '<span class="px-1.5 py-0.2 rounded text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 font-medium">✓ In Library</span>' : ''}
+                        </div>
+                    </div>
+
+                    <div class="shrink-0 text-3xs font-mono" id="pl-track-status-${tr.id}">
+                        ${isSaved ? '<span class="text-emerald-400"><i class="fa-solid fa-check"></i></span>' : '<span class="text-slate-500">Ready</span>'}
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function toggleSelectAllPlaylist(checked) {
+            document.querySelectorAll('.pl-track-check').forEach(cb => cb.checked = checked);
+            updatePlaylistSelectionCount();
+        }
+
+        function updatePlaylistSelectionCount() {
+            const checks = document.querySelectorAll('.pl-track-check:checked');
+            const total = document.querySelectorAll('.pl-track-check').length;
+            const count = checks.length;
+
+            const selectedCountText = document.getElementById('plSelectedCountText');
+            const actionBtnText = document.getElementById('plDownloadBtnText');
+            const btn = document.getElementById('plDownloadBtn');
+
+            if (selectedCountText) selectedCountText.innerText = `${count} of ${total} selected`;
+            if (actionBtnText) actionBtnText.innerText = `Download Selected (${count} tracks)`;
+            if (btn) btn.disabled = (count === 0);
+        }
+
+        async function downloadSelectedPlaylistTracks() {
+            if (!currentInspectedPlaylist || !currentInspectedPlaylist.tracks) return;
+
+            const selectedChecks = Array.from(document.querySelectorAll('.pl-track-check:checked'));
+            if (selectedChecks.length === 0) {
+                showToast("Please select at least 1 track to download", true);
+                return;
+            }
+
+            const selectedTracks = selectedChecks.map(cb => {
+                const idx = parseInt(cb.getAttribute('data-idx'));
+                return currentInspectedPlaylist.tracks[idx];
+            });
+
+            const btn = document.getElementById('plDownloadBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Starting batch (${selectedTracks.length} tracks)...</span>`;
+
+            try {
+                const res = await fetch('/api/playlist/download_selected', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        playlist_title: currentInspectedPlaylist.title,
+                        tracks: selectedTracks
+                    })
+                });
+                const data = await res.json();
+                showToast(`Queue started for ${selectedTracks.length} tracks!`);
+                closePlaylistModal();
+            } catch (err) {
+                showToast("Failed to queue playlist tracks", true);
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-download"></i><span>Download Selected Tracks</span>`;
+            }
+        }
+
+        function closePlaylistModal() {
+            document.getElementById('playlistModal').classList.add('hidden');
+        }
+
+        // Direct Link Inspection from Sources Tab
+        function inspectDirectUrl() {
+            const input = document.getElementById('directUrlInput');
+            const url = input.value.trim();
+            if (!url) {
+                showToast("Please paste a YouTube URL first", true);
+                return;
+            }
+            openPlaylistModal(url, "Inspecting Link");
+        }
+
         // Direct Link Submission
         async function submitDirectLink(e) {
             e.preventDefault();
             const input = document.getElementById('directUrlInput');
-            const syncNow = document.getElementById('directSyncNow').checked;
             const btn = document.getElementById('directAddBtn');
             const url = input.value.trim();
             if (!url) return;
@@ -1143,7 +1580,7 @@ HTML_TEMPLATE = """
             try {
                 const formData = new FormData();
                 formData.append('url', url);
-                if (syncNow) formData.append('sync_now', 'true');
+                formData.append('sync_now', 'true');
 
                 await fetch('/add', { method: 'POST', body: formData });
                 showToast("Link added to tracking list!");
@@ -1152,7 +1589,7 @@ HTML_TEMPLATE = """
             } catch (err) {
                 showToast("Error adding link", true);
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-plus"></i><span>Queue</span>';
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i><span>Queue All Directly</span>';
             }
         }
 
@@ -1288,7 +1725,6 @@ HTML_TEMPLATE = """
                     showToast(`Deleted: ${title}`);
                     const el = document.getElementById(`lib-song-${escapePathId(path)}`);
                     if (el) el.remove();
-                    // Update cache
                     allLibrarySongs = allLibrarySongs.filter(s => s.path !== path);
                     const summary = document.getElementById('libSummaryText');
                     if (summary) summary.innerText = `${allLibrarySongs.length} tracks`;
@@ -1354,20 +1790,26 @@ HTML_TEMPLATE = """
             const status = document.getElementById('dockStatusText');
             const progress = document.getElementById('dockProgressBar');
 
-            title.innerText = dl.title || "Active Download";
-            speed.innerText = `${Math.round(dl.percent)}%`;
-            status.innerText = dl.speed || dl.status || 'Downloading...';
-            progress.style.width = `${Math.max(5, dl.percent)}%`;
+            const isDone = dl.status === 'completed' || dl.percent >= 100;
+            
+            title.innerText = dl.queue_text ? `[${dl.queue_text}] ${dl.title}` : (dl.title || "Downloading track...");
+            speed.innerText = isDone ? "✓ 100%" : `${Math.round(dl.percent)}%`;
+            status.innerText = isDone ? "Completed! Added to library" : (dl.speed || dl.status || 'Downloading...');
+            progress.style.width = isDone ? "100%" : `${Math.max(5, dl.percent)}%`;
 
             dock.classList.remove('hidden');
             bar.classList.remove('hidden');
 
             // In-card update if present
             if (dl.id) {
-                const cardPct = document.getElementById(`card-pct-${dl.id}`);
-                const cardBar = document.getElementById(`card-bar-${dl.id}`);
-                if (cardPct) cardPct.innerText = `${Math.round(dl.percent)}%`;
-                if (cardBar) cardBar.style.width = `${Math.max(5, dl.percent)}%`;
+                if (isDone) {
+                    markCardAsCompleted(dl.id);
+                } else {
+                    const cardPct = document.getElementById(`card-pct-${dl.id}`);
+                    const cardBar = document.getElementById(`card-bar-${dl.id}`);
+                    if (cardPct) cardPct.innerText = `${Math.round(dl.percent)}%`;
+                    if (cardBar) cardBar.style.width = `${Math.max(5, dl.percent)}%`;
+                }
             }
         }
 
@@ -1427,18 +1869,55 @@ HTML_TEMPLATE = """
 
             fetch('/api/status').then(r => r.json()).then(d => {
                 updateStatusBadge(d.is_syncing);
-                if (d.is_syncing && d.current_download && d.current_download.status !== 'idle') {
-                    activeDownloadingId = d.current_download.id || d.current_download.url;
-                    updateDownloadDock(d.current_download);
+                
+                // 1. Process all completed IDs
+                if (d.completed_ids && Array.isArray(d.completed_ids)) {
+                    d.completed_ids.forEach(id => {
+                        downloadedIds.add(id);
+                        markCardAsCompleted(id);
+                        
+                        // Also update in playlist inspector modal if open
+                        const plStatus = document.getElementById(`pl-track-status-${id}`);
+                        if (plStatus) {
+                            plStatus.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check"></i> Done</span>`;
+                        }
+                    });
+                }
+
+                // 2. Process playlist queue
+                if (d.playlist_queue && d.playlist_queue.is_active) {
+                    const pq = d.playlist_queue;
+                    if (pq.current_id) {
+                        const plCurStatus = document.getElementById(`pl-track-status-${pq.current_id}`);
+                        if (plCurStatus) {
+                            plCurStatus.innerHTML = `<span class="text-rose-400 font-mono font-bold animate-pulse">${Math.round(d.current_download.percent || 0)}%</span>`;
+                        }
+                    }
+                }
+
+                // 3. Process active download
+                if (d.current_download && d.current_download.status !== 'idle') {
+                    const dl = d.current_download;
+                    if (dl.status === 'completed' || dl.percent >= 100) {
+                        if (dl.id) markCardAsCompleted(dl.id);
+                        updateDownloadDock(dl);
+                        // Hide dock after 4 seconds
+                        setTimeout(() => {
+                            if (!d.is_syncing) hideDownloadDock();
+                        }, 4000);
+                    } else if (d.is_syncing) {
+                        activeDownloadingId = dl.id || dl.url;
+                        updateDownloadDock(dl);
+                    }
                 } else {
-                    if (activeDownloadingId) {
-                        // Completed or idle
+                    if (activeDownloadingId && !d.is_syncing) {
+                        markCardAsCompleted(activeDownloadingId);
                         hideDownloadDock();
                         activeDownloadingId = null;
                     }
                 }
             }).catch(() => {});
-        }, 2200);
+        }, 1800);
     </script>
 </body>
 </html>
@@ -1463,6 +1942,29 @@ def api_search():
     query = request.args.get("q", "").strip()
     results = search_youtube(query)
     return jsonify({"results": results})
+
+@app.route("/api/playlist/inspect")
+def api_playlist_inspect():
+    url = request.args.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+    data = inspect_playlist(url)
+    if data:
+        return jsonify(data)
+    return jsonify({"error": "Failed to inspect playlist"}), 500
+
+@app.route("/api/playlist/download_selected", methods=["POST"])
+def api_playlist_download_selected():
+    data = request.json or {}
+    playlist_title = data.get("playlist_title", "Selected Playlist Tracks")
+    tracks = data.get("tracks", [])
+    if not tracks:
+        return jsonify({"error": "No tracks provided"}), 400
+    
+    success = trigger_playlist_queue_async(tracks, playlist_title)
+    if success:
+        return jsonify({"status": "queued", "count": len(tracks)})
+    return jsonify({"error": "A download is already in progress"}), 409
 
 @app.route("/api/library")
 def api_library():
@@ -1495,7 +1997,6 @@ def api_library():
                         })
                     except Exception:
                         pass
-    # Sort newest first
     songs.sort(key=lambda x: x["timestamp"], reverse=True)
     total_mb = round(total_bytes / (1024 * 1024), 1)
     total_gb = round(total_bytes / (1024 * 1024 * 1024), 2)
@@ -1555,9 +2056,12 @@ def api_logs():
 def api_status():
     with download_lock:
         dl_copy = dict(current_download)
+        pq_copy = dict(playlist_queue)
     return jsonify({
         "is_syncing": is_syncing,
         "current_download": dl_copy,
+        "playlist_queue": pq_copy,
+        "completed_ids": list(completed_download_ids),
         "playlists_count": len(get_playlists()),
         "cookies_ok": has_cookies()
     })
