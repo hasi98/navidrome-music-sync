@@ -548,54 +548,148 @@ def search_youtube(query, limit=40):
     return []
 
 def inspect_playlist(url):
+    url = (url or "").strip()
+    if not url:
+        return None
+
+    # Detect IDs
+    list_m = re.search(r"[?&]list=([a-zA-Z0-9_-]+)", url)
+    pl_id = list_m.group(1) if list_m else None
+
+    vid_m = re.search(r"(?:v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/|^)([a-zA-Z0-9_-]{11})(?:[?&/]|$)", url)
+    vid = vid_m.group(1) if vid_m else None
+
+    is_radio = bool(pl_id and (pl_id.startswith("RD") or pl_id.startswith("UL")))
+    is_real_playlist = bool(pl_id and not is_radio)
+
     cookie_arg = []
     if os.path.exists(COOKIES_FILE) and os.path.getsize(COOKIES_FILE) > 10:
         cookie_arg = ["--cookies", COOKIES_FILE]
-        
-    cmd = [
-        "/usr/local/bin/yt-dlp",
-        *cookie_arg,
-        "--flat-playlist",
-        "--dump-single-json",
-        url
-    ]
-    res = subprocess.run(cmd, capture_output=True, text=True, timeout=25)
-    if (res.returncode != 0 or not res.stdout.strip()) and cookie_arg:
-        cmd_no_cookies = ["/usr/local/bin/yt-dlp", "--flat-playlist", "--dump-single-json", url]
-        res = subprocess.run(cmd_no_cookies, capture_output=True, text=True, timeout=25)
 
-    if res.stdout:
+    # 1. If real playlist or dynamic radio mix, inspect via yt-dlp flat-playlist with a safe limit
+    if is_real_playlist or is_radio:
+        limit = "30" if is_radio else "100"
+        cmd = [
+            "/usr/local/bin/yt-dlp",
+            *cookie_arg,
+            "--flat-playlist",
+            "--playlist-end", limit,
+            "--dump-single-json",
+            "--no-warnings",
+            url
+        ]
+        res = None
         try:
-            data = json.loads(res.stdout)
-            title = data.get("title") or "YouTube Playlist"
-            entries = data.get("entries") or []
-            tracks = []
-            for e in entries:
-                v_id = e.get("id")
-                v_title = e.get("title")
-                if v_id and v_title:
-                    duration_sec = e.get("duration") or 0
-                    mins = int(duration_sec // 60)
-                    secs = int(duration_sec % 60)
-                    dur_str = f"{mins}:{secs:02d}" if duration_sec else ""
-                    in_lib = (v_id in completed_download_ids) or is_track_in_library(v_title)
-                    tracks.append({
-                        "id": v_id,
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=16)
+        except Exception as e:
+            print("yt-dlp inspect error/timeout with cookies:", e)
+
+        # Retry without cookies if cookies failed or produced empty output
+        if (not res or res.returncode != 0 or not (res.stdout and res.stdout.strip())) and cookie_arg:
+            try:
+                cmd_no_cookies = [
+                    "/usr/local/bin/yt-dlp",
+                    "--flat-playlist",
+                    "--playlist-end", limit,
+                    "--dump-single-json",
+                    "--no-warnings",
+                    url
+                ]
+                res = subprocess.run(cmd_no_cookies, capture_output=True, text=True, timeout=16)
+            except Exception as e:
+                print("yt-dlp inspect error/timeout without cookies:", e)
+
+        if res and res.stdout:
+            try:
+                data = json.loads(res.stdout)
+                title = data.get("title") or ("YouTube Mix" if is_radio else "YouTube Playlist")
+                entries = data.get("entries") or []
+                tracks = []
+                for e in entries:
+                    v_id = e.get("id")
+                    v_title = e.get("title")
+                    if v_id and v_title:
+                        duration_sec = e.get("duration") or 0
+                        mins = int(duration_sec // 60)
+                        secs = int(duration_sec % 60)
+                        dur_str = f"{mins}:{secs:02d}" if duration_sec else ""
+                        in_lib = (v_id in completed_download_ids) or is_track_in_library(v_title)
+                        tracks.append({
+                            "id": v_id,
+                            "title": v_title,
+                            "uploader": e.get("uploader") or e.get("channel") or "",
+                            "duration": dur_str,
+                            "thumbnail": f"https://i.ytimg.com/vi/{v_id}/hqdefault.jpg",
+                            "url": f"https://www.youtube.com/watch?v={v_id}",
+                            "in_library": in_lib
+                        })
+                if tracks:
+                    return {
+                        "id": data.get("id") or pl_id or (vid or ""),
+                        "title": title,
+                        "total": len(tracks),
+                        "tracks": tracks
+                    }
+            except Exception as err:
+                print("Error parsing playlist inspection:", err)
+
+    # 2. Fallback: If single video ID is found (e.g. youtu.be/<id>, watch?v=<id>, or seed from radio mix)
+    if vid:
+        try:
+            oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={vid}&format=json"
+            req = urllib.request.Request(oembed_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                o_data = json.loads(resp.read().decode('utf-8'))
+                v_title = o_data.get("title") or "YouTube Track"
+                uploader = o_data.get("author_name") or ""
+                thumb = o_data.get("thumbnail_url") or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+                in_lib = (vid in completed_download_ids) or is_track_in_library(v_title)
+                return {
+                    "id": vid,
+                    "title": v_title,
+                    "total": 1,
+                    "tracks": [{
+                        "id": vid,
                         "title": v_title,
-                        "uploader": e.get("uploader") or e.get("channel") or "",
-                        "duration": dur_str,
-                        "thumbnail": f"https://i.ytimg.com/vi/{v_id}/hqdefault.jpg",
-                        "url": f"https://www.youtube.com/watch?v={v_id}",
+                        "uploader": uploader,
+                        "duration": "",
+                        "thumbnail": thumb,
+                        "url": f"https://www.youtube.com/watch?v={vid}",
                         "in_library": in_lib
-                    })
-            return {
-                "id": data.get("id") or "",
-                "title": title,
-                "total": len(tracks),
-                "tracks": tracks
-            }
+                    }]
+                }
         except Exception as err:
-            print("Error parsing playlist inspection:", err)
+            print("oEmbed fallback inspection error:", err)
+
+    # 3. Fallback: If the user entered a search query instead of a URL
+    if not is_real_playlist and not is_radio and not vid and len(url) > 2 and not url.startswith("http"):
+        try:
+            search_items = search_youtube(url, limit=25)
+            if search_items:
+                tracks = []
+                for s in search_items:
+                    s_id = s.get("id")
+                    s_title = s.get("title")
+                    if s_id and s_title:
+                        tracks.append({
+                            "id": s_id,
+                            "title": s_title,
+                            "uploader": s.get("channel") or "",
+                            "duration": s.get("duration") or "",
+                            "thumbnail": s.get("thumbnail") or f"https://i.ytimg.com/vi/{s_id}/hqdefault.jpg",
+                            "url": s.get("url") or f"https://www.youtube.com/watch?v={s_id}",
+                            "in_library": (s_id in completed_download_ids) or is_track_in_library(s_title)
+                        })
+                if tracks:
+                    return {
+                        "id": "search_results",
+                        "title": f'Search Results: "{url}"',
+                        "total": len(tracks),
+                        "tracks": tracks
+                    }
+        except Exception as err:
+            print("Search fallback inspection error:", err)
+
     return None
 
 HTML_TEMPLATE = """
@@ -1016,7 +1110,7 @@ HTML_TEMPLATE = """
             <div class="p-4 border-b border-slate-800 flex items-center justify-between">
                 <div class="min-w-0 flex-1 pr-3">
                     <div class="flex items-center space-x-2">
-                        <span class="px-1.5 py-0.5 rounded text-3xs font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">Playlist</span>
+                        <span id="plModalTypeBadge" class="px-1.5 py-0.5 rounded text-3xs font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">Playlist</span>
                         <span id="plModalTotalBadge" class="text-3xs text-slate-400">Loading tracks...</span>
                     </div>
                     <h3 id="plModalTitle" class="text-sm font-bold text-white truncate mt-1">Playlist Tracks</h3>
@@ -1499,21 +1593,30 @@ HTML_TEMPLATE = """
                 const res = await fetch(`/api/playlist/inspect?url=${encodeURIComponent(url)}`);
                 const data = await res.json();
 
-                if (!data || !data.tracks || data.tracks.length === 0) {
-                    list.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs">Could not load playlist tracks. Make sure playlist is public or unlisted.</div>`;
+                if (!res.ok || !data || !data.tracks || data.tracks.length === 0) {
+                    const errorMsg = (data && data.error) ? data.error : "Could not load playlist tracks. Make sure playlist is public or unlisted.";
+                    list.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs">${escapeHtml(errorMsg)}</div>`;
                     totalBadge.innerText = "0 tracks";
                     return;
                 }
 
                 currentInspectedPlaylist = data;
                 titleEl.innerText = data.title;
-                totalBadge.innerText = `${data.total} tracks total`;
+                totalBadge.innerText = `${data.total} track${data.total === 1 ? '' : 's'} total`;
+
+                const typeBadge = document.getElementById('plModalTypeBadge');
+                if (typeBadge) {
+                    if (data.total === 1) typeBadge.innerText = "Single Track";
+                    else if (data.title.toLowerCase().includes('mix') || (data.id && data.id.startsWith('RD'))) typeBadge.innerText = "YouTube Mix";
+                    else if (data.id === 'search_results') typeBadge.innerText = "Search Result";
+                    else typeBadge.innerText = "Playlist";
+                }
 
                 renderPlaylistTracks(data.tracks);
                 updatePlaylistSelectionCount();
 
             } catch (err) {
-                list.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs">Error inspecting playlist: ${err.message}</div>`;
+                list.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs">Error inspecting tracks: ${escapeHtml(err.message)}</div>`;
             }
         }
 
@@ -2140,10 +2243,14 @@ def api_playlist_inspect():
     url = request.args.get("url", "").strip()
     if not url:
         return jsonify({"error": "No URL provided"}), 400
-    data = inspect_playlist(url)
-    if data:
-        return jsonify(data)
-    return jsonify({"error": "Failed to inspect playlist"}), 500
+    try:
+        data = inspect_playlist(url)
+        if data:
+            return jsonify(data)
+        return jsonify({"error": "Could not inspect tracks from this link. Make sure it is public or unlisted."}), 400
+    except Exception as e:
+        print("api_playlist_inspect error:", e)
+        return jsonify({"error": f"Inspection failed: {str(e)}"}), 500
 
 @app.route("/api/playlist/download_selected", methods=["POST"])
 def api_playlist_download_selected():
