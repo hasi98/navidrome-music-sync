@@ -694,373 +694,498 @@ def inspect_playlist(url):
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#090d16">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>TubeSync Mobile - Navidrome Manager</title>
+    <meta name="theme-color" content="#fbf8ff">
+    <title>TubeSync - Navidrome Engine</title>
     
-    <!-- Tailwind CSS & FontAwesome -->
+    <!-- Google Fonts: Plus Jakarta Sans & Material Symbols Outlined -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        darkbg: '#090d16',
-                        glass: 'rgba(15, 23, 42, 0.78)',
+                        "surface": "#fbf8ff",
+                        "surface-bright": "#fbf8ff",
+                        "surface-dim": "#dad9e3",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f4f2fd",
+                        "surface-container": "#eeedf7",
+                        "surface-container-high": "#e8e7f1",
+                        "surface-container-highest": "#e3e1ec",
+                        "on-surface": "#1a1b22",
+                        "on-surface-variant": "#5d3f3f",
+                        "outline": "#916e6e",
+                        "outline-variant": "#e6bdbc",
+                        "primary": "#ba002b",
+                        "primary-container": "#e5183b",
+                        "on-primary": "#ffffff",
+                        "secondary": "#8234c6",
+                        "secondary-container": "#b86dfd",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed": "#f1dbff",
+                        "on-secondary-fixed": "#2d0050",
+                        "tertiary": "#a5304c",
+                        "tertiary-container": "#c54963",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#2f3038",
+                        "inverse-on-surface": "#f1effa"
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+                    },
+                    borderRadius: {
+                        'DEFAULT': '1rem',
+                        'lg': '1.5rem',
+                        'xl': '2rem',
+                        '2xl': '2.25rem',
+                        'full': '9999px'
                     }
                 }
             }
-        }
+        };
     </script>
     
     <style>
         body {
-            background-color: #090d16;
-            color: #f1f5f9;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #fbf8ff;
+            color: #1a1b22;
             -webkit-tap-highlight-color: transparent;
-            user-select: none;
+            overscroll-behavior-y: none;
         }
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        .pb-safe { padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px); }
+        .pt-safe { padding-top: max(env(safe-area-inset-top, 0px), 8px); }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+            line-height: 1;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.82);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+        @keyframes soundWave {
+            0%, 100% { height: 4px; }
+            50% { height: 16px; }
         }
-        .touch-action-btn:active {
-            transform: scale(0.95);
-        }
-        @keyframes eq-dance {
-            0%, 100% { height: 3px; }
-            50% { height: 13px; }
-        }
-        .eq-bar-1 { animation: eq-dance 0.5s ease-in-out infinite; }
-        .eq-bar-2 { animation: eq-dance 0.7s ease-in-out infinite 0.15s; }
-        .eq-bar-3 { animation: eq-dance 0.4s ease-in-out infinite 0.3s; }
-        .eq-bar-4 { animation: eq-dance 0.6s ease-in-out infinite 0.1s; }
-
-        .line-clamp-1 {
-            display: -webkit-box;
-            -webkit-line-clamp: 1;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
+        .animate-wave-1 { animation: soundWave 0.8s ease-in-out infinite; }
+        .animate-wave-2 { animation: soundWave 0.8s ease-in-out 0.2s infinite; }
+        .animate-wave-3 { animation: soundWave 0.8s ease-in-out 0.4s infinite; }
     </style>
 </head>
-<body class="min-h-screen pb-32 flex flex-col items-center antialiased selection:bg-rose-500 selection:text-white">
+<body class="bg-surface text-on-surface flex flex-col min-h-screen select-none antialiased">
 
-    <!-- Toast Notification Container -->
-    <div id="toastBox" class="fixed top-3 z-50 left-1/2 -translate-x-1/2 w-11/12 max-w-sm pointer-events-none transition-all duration-300 opacity-0 -translate-y-4"></div>
+    <!-- Toast Notification Banner -->
+    <div id="toastBox" class="fixed top-20 inset-x-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-300 opacity-0 -translate-y-4"></div>
 
-    <!-- Main Container -->
-    <main class="w-full max-w-xl px-3 sm:px-4 py-3 space-y-4">
-        
-        <!-- App Header -->
-        <header class="glass-panel p-3 rounded-2xl shadow-xl flex items-center justify-between sticky top-2 z-40">
-            <div class="flex items-center space-x-2.5">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-500 via-pink-600 to-indigo-600 flex items-center justify-center text-white text-base shadow-md shadow-rose-500/20">
-                    <i class="fa-solid fa-compact-disc animate-[spin_8s_linear_infinite]"></i>
+    <!-- Fixed Luminous Top Header -->
+    <header class="fixed top-0 w-full z-40 bg-surface/85 backdrop-blur-xl border-b border-surface-container-high/80 pt-safe">
+        <div class="h-16 px-4 sm:px-6 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined text-[22px] icon-fill">graphic_eq</span>
                 </div>
-                <div>
-                    <h1 class="text-sm sm:text-base font-bold tracking-tight text-white flex items-center gap-1.5">
-                        <span>TubeSync</span>
-                        <span id="headerSyncBadge" class="px-2 py-0.5 text-3xs rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            ● Ready
-                        </span>
-                    </h1>
-                    <p class="text-3xs text-slate-400">Navidrome Cloud Sync</p>
+                <div class="flex flex-col">
+                    <span class="text-base font-bold text-primary tracking-tight leading-none">TubeSync</span>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <span id="headerPulseDot" class="w-1.5 h-1.5 rounded-full {% if is_syncing %}bg-amber-500 animate-ping{% else %}bg-emerald-500 animate-pulse{% endif %}"></span>
+                        <span id="headerStatusText" class="text-[10px] font-bold text-outline tracking-wider uppercase">{% if is_syncing %}Syncing Pipeline{% else %}Navidrome Online{% endif %}</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex items-center space-x-2">
-                <!-- Stop Download Button -->
-                <button onclick="stopDownload()" id="headerStopBtn" class="hidden touch-action-btn px-2.5 py-1.5 bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/50 rounded-xl text-3xs font-bold transition flex items-center space-x-1 animate-pulse" title="Cancel active download">
-                    <i class="fa-solid fa-stop text-3xs"></i>
-                    <span>Stop</span>
-                </button>
-
-                <!-- Open Navidrome Link -->
-                <a href="http://{{ host }}:4533" target="_blank"
-                    class="touch-action-btn px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold rounded-xl shadow-md flex items-center space-x-1.5 transition">
-                    <i class="fa-solid fa-headphones"></i>
-                    <span>Player</span>
+            <div class="flex items-center gap-2">
+                <a href="http://{{ host }}:4533" target="_blank" rel="noreferrer"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-95 transition text-xs font-semibold shadow-sm">
+                    <span class="material-symbols-outlined text-[16px] text-secondary">open_in_new</span>
+                    <span class="hidden sm:inline">Navidrome</span>
                 </a>
+                <div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[18px]">cloud_done</span>
+                </div>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <!-- ================= TAB 1: SEARCH (DEFAULT) ================= -->
-        <section id="tab-search" class="tab-content space-y-3">
-            
+    <!-- Main Content Area -->
+    <main class="flex-1 w-full max-w-2xl mx-auto px-4 sm:px-5 pt-20 pb-32">
+
+        <!-- ================= TAB 1: SEARCH & DISCOVERY ================= -->
+        <section id="tab-search" class="tab-content flex flex-col gap-4">
             <!-- Search Bar -->
-            <div class="glass-panel p-3.5 rounded-2xl space-y-3 shadow-lg">
-                <div class="relative flex items-center">
-                    <span class="absolute left-3.5 text-slate-400 pointer-events-none">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                    </span>
-                    <input type="text" id="searchInput" placeholder="Search track, playlist, radio mix..."
-                        class="w-full pl-10 pr-9 py-2.5 bg-slate-900/90 border border-slate-700/80 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition text-slate-100 placeholder-slate-500 shadow-inner"
-                        onkeydown="if(event.key==='Enter') doSearch()">
-                    <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3 text-slate-500 hover:text-slate-300 p-1">
-                        <i class="fa-solid fa-circle-xmark"></i>
-                    </button>
-                </div>
+            <div class="relative flex items-center w-full">
+                <span class="material-symbols-outlined absolute left-4 text-primary text-[20px] pointer-events-none">search</span>
+                <input type="text" id="searchInput" placeholder="Search songs, albums, or paste YouTube link..."
+                    class="w-full h-12 pl-11 pr-11 bg-surface-container rounded-2xl text-sm font-medium text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-low focus:ring-2 focus:ring-primary/20 shadow-sm transition-all"
+                    onkeydown="if(event.key === 'Enter') doSearch()">
+                <button type="button" id="clearSearchBtn" onclick="clearSearchInput()"
+                    class="absolute right-3.5 w-6 h-6 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-90 transition opacity-0 pointer-events-none">
+                    <span class="material-symbols-outlined text-[14px]">close</span>
+                </button>
+            </div>
 
-                <!-- Action Button & Filter Chips -->
-                <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center space-x-1.5 overflow-x-auto pb-0.5 no-scrollbar text-2xs">
-                        <button onclick="quickSearch('Daft Punk')" class="touch-action-btn px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-slate-300 shrink-0">⚡ Daft Punk</button>
-                        <button onclick="quickSearch('Lofi Hip Hop Radio')" class="touch-action-btn px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-slate-300 shrink-0">📻 Lofi Radio</button>
-                        <button onclick="quickSearch('Synthwave Playlist')" class="touch-action-btn px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-slate-300 shrink-0">🌌 Synthwave</button>
+            <!-- Category Filter Pills -->
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                <button onclick="setSearchFilter('all')" id="filterBtn-all"
+                    class="filter-chip px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm bg-primary text-on-primary shrink-0 active:scale-95 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[15px] icon-fill">local_fire_department</span>
+                    <span>All</span>
+                </button>
+                <button onclick="setSearchFilter('song')" id="filterBtn-song"
+                    class="filter-chip px-4 py-1.5 rounded-full text-xs font-semibold transition-all bg-surface-container text-on-surface-variant hover:text-on-surface shrink-0 active:scale-95 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[15px]">music_note</span>
+                    <span>Songs</span>
+                </button>
+                <button onclick="setSearchFilter('playlist')" id="filterBtn-playlist"
+                    class="filter-chip px-4 py-1.5 rounded-full text-xs font-semibold transition-all bg-surface-container text-on-surface-variant hover:text-on-surface shrink-0 active:scale-95 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[15px]">queue_music</span>
+                    <span>Playlists</span>
+                </button>
+                <button onclick="setSearchFilter('radio')" id="filterBtn-radio"
+                    class="filter-chip px-4 py-1.5 rounded-full text-xs font-semibold transition-all bg-surface-container text-on-surface-variant hover:text-on-surface shrink-0 active:scale-95 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[15px]">radio</span>
+                    <span>Radios</span>
+                </button>
+            </div>
+
+            <!-- Direct Pipeline Sync Banner -->
+            <div class="relative w-full rounded-2xl overflow-hidden shadow-md bg-gradient-to-tr from-primary via-tertiary-container to-secondary-container p-5 text-on-primary">
+                <div class="relative z-10 flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-bright/20 backdrop-blur-md">
+                            <span class="w-2 h-2 rounded-full bg-surface-bright animate-ping"></span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-surface-bright">Direct Pipeline Ready</span>
+                        </div>
+                        <span class="material-symbols-outlined text-surface-bright text-[22px]">cloud_sync</span>
                     </div>
-
-                    <button onclick="doSearch()" id="searchBtn"
-                        class="touch-action-btn px-4 py-2 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 font-semibold text-xs text-white rounded-xl shadow-md transition flex items-center space-x-1.5 shrink-0">
-                        <i class="fa-solid fa-arrow-right"></i>
-                        <span>Find</span>
-                    </button>
+                    <div class="mt-1">
+                        <h2 class="text-xl font-bold tracking-tight text-on-primary">Direct Pipeline Sync</h2>
+                        <p class="text-xs text-white/90 mt-1 leading-relaxed">
+                            Search music or paste links to download YouTube audio directly into your high-res Navidrome server library with auto-synced lyrics.
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Dedicated Search Results Section -->
-            <div id="searchResultsSection" class="hidden glass-panel p-3.5 rounded-2xl space-y-3 border border-slate-700/80 shadow-2xl">
-                
-                <!-- Category Filter Buttons Bar (Songs / Playlists / Radios) -->
-                <div class="flex items-center justify-between pb-2 border-b border-slate-800/80">
-                    <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-0.5">
-                        <button onclick="setSearchFilter('all')" id="filterBtn-all"
-                            class="filter-chip touch-action-btn px-2.5 py-1 rounded-xl text-3xs font-semibold bg-rose-600 text-white shadow-sm flex items-center space-x-1 shrink-0">
-                            <span>All</span>
-                            <span id="filterCount-all" class="px-1.5 py-0.2 bg-black/30 rounded-full font-mono">0</span>
-                        </button>
-                        <button onclick="setSearchFilter('song')" id="filterBtn-song"
-                            class="filter-chip touch-action-btn px-2.5 py-1 rounded-xl text-3xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700/60 flex items-center space-x-1 shrink-0">
-                            <span>🎵 Songs</span>
-                            <span id="filterCount-song" class="px-1.5 py-0.2 bg-slate-900 rounded-full font-mono">0</span>
-                        </button>
-                        <button onclick="setSearchFilter('playlist')" id="filterBtn-playlist"
-                            class="filter-chip touch-action-btn px-2.5 py-1 rounded-xl text-3xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700/60 flex items-center space-x-1 shrink-0">
-                            <span>📁 Playlists</span>
-                            <span id="filterCount-playlist" class="px-1.5 py-0.2 bg-slate-900 rounded-full font-mono">0</span>
-                        </button>
-                        <button onclick="setSearchFilter('radio')" id="filterBtn-radio"
-                            class="filter-chip touch-action-btn px-2.5 py-1 rounded-xl text-3xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700/60 flex items-center space-x-1 shrink-0">
-                            <span>📻 Radios & Mixes</span>
-                            <span id="filterCount-radio" class="px-1.5 py-0.2 bg-slate-900 rounded-full font-mono">0</span>
-                        </button>
-                    </div>
-
-                    <button onclick="clearSearch()" class="touch-action-btn text-3xs text-slate-400 hover:text-rose-400 p-1 shrink-0 ml-2">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+            <!-- Search Results Section -->
+            <div id="searchSection" class="flex flex-col gap-3">
+                <div class="flex items-center justify-between px-1">
+                    <h3 class="text-base font-bold text-on-surface tracking-tight" id="searchHeaderTitle">Explore Audio</h3>
+                    <span class="text-xs text-outline font-medium" id="searchResultCountBadge"></span>
                 </div>
 
-                <!-- Results Scroll Container -->
-                <div id="searchResultsList" class="space-y-2.5 max-h-[440px] overflow-y-auto pr-1"></div>
+                <div id="searchResultsList" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="col-span-full p-10 text-center text-outline text-xs">
+                        <span class="material-symbols-outlined text-primary text-3xl mb-2 block opacity-40">search</span>
+                        Search any song, artist, album, or paste a YouTube link to sync.
+                    </div>
+                </div>
 
                 <!-- Load More Button -->
-                <div id="loadMoreContainer" class="pt-2 hidden border-t border-slate-800/80">
-                    <button onclick="loadMoreResults()" id="loadMoreBtn"
-                        class="touch-action-btn w-full py-2 px-3 bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/60 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center space-x-2 transition shadow">
-                        <i class="fa-solid fa-angles-down text-rose-400"></i>
+                <div id="loadMoreContainer" class="hidden text-center pt-2">
+                    <button onclick="renderBatch()" class="px-6 py-2.5 rounded-full bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs shadow-sm transition active:scale-95 inline-flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">expand_more</span>
                         <span id="loadMoreBtnText">Load More Results</span>
                     </button>
                 </div>
             </div>
+        </section>
 
-            <!-- Empty Search Prompt -->
-            <div id="searchPlaceholder" class="p-8 text-center text-slate-500 text-xs italic glass-panel rounded-2xl border-dashed">
-                <i class="fa-solid fa-music text-slate-600 text-2xl mb-2 block"></i>
-                Search above to download songs, playlists, or radio mixes directly into your Navidrome server!
+        <!-- ================= TAB 2: SERVER MUSIC LIBRARY ================= -->
+        <section id="tab-library" class="tab-content hidden flex flex-col gap-4">
+            <!-- Header Section -->
+            <div class="flex flex-col gap-1 pt-1">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-primary">TubeSync Vault</span>
+                    <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant text-[11px] font-semibold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Subsonic Live</span>
+                    </div>
+                </div>
+                <h1 class="text-2xl font-bold text-on-surface tracking-tight">Library</h1>
+                <p class="text-xs text-on-surface-variant flex items-center gap-1.5">
+                    <span>Navidrome Vault</span>
+                    <span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+                    <span class="font-semibold text-on-surface" id="libTotalTracksBadge">Scanning...</span>
+                </p>
+            </div>
+
+            <!-- Storage & Index Card -->
+            <div class="relative overflow-hidden rounded-2xl bg-surface-container-lowest p-4 shadow-sm border border-surface-container-high/60">
+                <div class="flex flex-col gap-2 relative z-10">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-full bg-secondary-fixed flex items-center justify-center text-secondary">
+                                <span class="material-symbols-outlined text-[16px]">pie_chart</span>
+                            </div>
+                            <span class="text-xs font-semibold text-on-surface">Music Library Storage</span>
+                        </div>
+                        <span class="text-[11px] text-on-surface-variant" id="libSubfolderInfo">/home/ubuntu/music/library</span>
+                    </div>
+
+                    <div class="w-full h-2 rounded-full bg-surface-container overflow-hidden p-[1px] mt-1">
+                        <div class="h-full rounded-full bg-gradient-to-r from-secondary to-primary w-full transition-all duration-700"></div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-1 text-[11px] text-on-surface-variant">
+                        <button onclick="triggerRescan()" id="rescanLibraryBtn" class="text-primary hover:text-primary-container font-semibold flex items-center gap-1 active:scale-95 transition" title="Trigger Navidrome library scan">
+                            <span class="material-symbols-outlined text-[15px]" id="rescanIcon">autorenew</span>
+                            <span>Rescan Navidrome</span>
+                        </button>
+                        <button onclick="fetchLibrary()" class="text-outline hover:text-on-surface font-semibold flex items-center gap-1 active:scale-95 transition" title="Refresh local cache">
+                            <span class="material-symbols-outlined text-[14px]">refresh</span>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search & Filter Row -->
+            <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                    <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+                    <input type="text" id="libSearchInput" placeholder="Filter library tracks..."
+                        oninput="filterLibraryList(this.value)"
+                        class="w-full h-11 pl-10 pr-4 rounded-full bg-surface-container-lowest text-on-surface placeholder:text-outline text-xs font-medium shadow-sm border border-surface-container-high/60 focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+                <button onclick="toggleSelectAllMode()" id="selectionModeBtn"
+                    class="h-11 px-4 rounded-full bg-surface-container-lowest text-on-surface border border-surface-container-high/60 flex items-center gap-1.5 shadow-sm text-xs font-semibold active:scale-95 transition">
+                    <span class="material-symbols-outlined text-[18px] text-primary">checklist</span>
+                    <span id="selectionModeText">Select</span>
+                </button>
+            </div>
+
+            <!-- Batch Action Bar (Appears when selection mode is active) -->
+            <div id="batchActionBar" class="hidden p-3 rounded-2xl bg-surface-container-low border border-primary/20 flex items-center justify-between gap-3 shadow-sm">
+                <label class="flex items-center gap-2 text-xs font-semibold text-on-surface cursor-pointer select-none">
+                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)"
+                        class="rounded border-outline/40 text-primary focus:ring-0 w-4 h-4">
+                    <span>Select All</span>
+                </label>
+                <div class="flex items-center gap-2">
+                    <span id="selectedCountText" class="text-xs font-bold text-primary">0 selected</span>
+                    <button onclick="deleteSelectedBatch()" id="batchDeleteBtn" disabled
+                        class="px-3 py-1.5 rounded-full bg-error text-on-error font-bold text-xs disabled:opacity-40 disabled:pointer-events-none active:scale-95 transition shadow-sm flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[15px]">delete</span>
+                        <span>Delete</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Library Track Stream List -->
+            <div id="libraryTracksList" class="flex flex-col gap-2">
+                <div class="p-10 text-center text-outline text-xs">
+                    <span class="material-symbols-outlined text-primary text-3xl mb-2 block opacity-40">library_music</span>
+                    Loading library tracks...
+                </div>
             </div>
         </section>
 
-        <!-- ================= TAB 2: DOWNLOADED MUSIC LIBRARY ================= -->
-        <section id="tab-library" class="tab-content hidden space-y-3">
-            <div class="glass-panel p-3.5 rounded-2xl space-y-3 shadow-lg">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <div class="w-7 h-7 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center text-xs">
-                            <i class="fa-solid fa-music"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-xs sm:text-sm font-semibold text-slate-200">Server Music Library</h2>
-                            <p class="text-3xs text-slate-400" id="libSummaryText">Loading library...</p>
-                        </div>
-                    </div>
-
-                    <button onclick="fetchLibrary()" class="touch-action-btn p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs flex items-center space-x-1" title="Reload library">
-                        <i class="fa-solid fa-arrows-rotate" id="libRefreshIcon"></i>
-                    </button>
-                </div>
-
-                <!-- Library Real-Time Filter -->
-                <div class="relative flex items-center">
-                    <span class="absolute left-3 text-slate-400 pointer-events-none text-xs">
-                        <i class="fa-solid fa-filter"></i>
+        <!-- ================= TAB 3: SOURCES & PLAYLISTS ================= -->
+        <section id="tab-sources" class="tab-content hidden flex flex-col gap-4">
+            <!-- Engine Status Pill -->
+            <div class="flex items-center justify-between px-1 pt-1">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-low shadow-sm">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
-                    <input type="text" id="libFilterInput" placeholder="Filter downloaded songs or artists..."
-                        oninput="filterLibrary(this.value)"
-                        class="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-pink-500">
+                    <span class="text-xs text-on-surface-variant font-semibold tracking-wide">yt-dlp Engine · High-Res Audio</span>
                 </div>
-
-                <!-- Library Multi-Select & Bulk Actions Bar -->
-                <div class="flex items-center justify-between px-1 py-1 text-2xs border-b border-slate-800/80 pb-1.5">
-                    <label class="flex items-center space-x-2 text-slate-300 cursor-pointer select-none">
-                        <input type="checkbox" id="libSelectAllCheck" onchange="toggleSelectAllLibrary(this.checked)" class="rounded border-slate-700 text-pink-600 focus:ring-0">
-                        <span id="libSelectAllLabel">Select All</span>
-                    </label>
-
-                    <div id="libBulkActions" class="hidden flex items-center space-x-2">
-                        <span id="libSelectedCountBadge" class="text-pink-400 font-mono text-3xs">0 selected</span>
-                        <button onclick="deleteSelectedLibrarySongs()" id="libDeleteBtn"
-                            class="touch-action-btn px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-xl text-3xs flex items-center space-x-1 shadow transition">
-                            <i class="fa-solid fa-trash-can"></i>
-                            <span>Delete Selected</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Downloaded Songs List -->
-                <div id="librarySongsList" class="space-y-2 max-h-[480px] overflow-y-auto pr-1"></div>
-            </div>
-        </section>
-
-        <!-- ================= TAB 3: SOURCES & PLAYLIST TRACKING ================= -->
-        <section id="tab-sources" class="tab-content hidden space-y-3">
-            
-            <!-- Add Direct Link Card -->
-            <div class="glass-panel p-3.5 rounded-2xl shadow-lg space-y-3">
-                <div class="flex items-center space-x-2">
-                    <div class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs">
-                        <i class="fa-solid fa-link"></i>
-                    </div>
-                    <h2 class="text-xs sm:text-sm font-semibold text-slate-200">Add YouTube Link</h2>
-                </div>
-                <p class="text-3xs text-slate-400">Paste any song or playlist link. Choose to preview & select tracks or queue the whole source.</p>
-
-                <div class="space-y-2.5">
-                    <div>
-                        <input type="url" id="directUrlInput" placeholder="https://www.youtube.com/playlist?list=... or watch URL" required
-                            class="w-full px-3 py-2 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
-                    </div>
-                    <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
-                        <button type="button" onclick="inspectDirectUrl()" id="directInspectBtn"
-                            class="touch-action-btn flex-1 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700/70 text-indigo-400 font-semibold text-3xs rounded-xl shadow transition flex items-center justify-center space-x-1.5">
-                            <i class="fa-solid fa-list-check"></i>
-                            <span>Inspect & Select Tracks</span>
-                        </button>
-                        <button type="button" onclick="submitDirectLink(event)" id="directAddBtn"
-                            class="touch-action-btn flex-1 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-3xs rounded-xl shadow transition flex items-center justify-center space-x-1.5">
-                            <i class="fa-solid fa-plus"></i>
-                            <span>Queue All Directly</span>
-                        </button>
-                    </div>
+                <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container text-xs text-on-surface-variant font-medium">
+                    <span class="material-symbols-outlined text-[15px] text-primary icon-fill">speed</span>
+                    <span>Ready</span>
                 </div>
             </div>
 
-            <!-- Tracked Playlists List -->
-            <div class="glass-panel p-3.5 rounded-2xl shadow-lg space-y-3">
+            <!-- Add Pipeline Source Card -->
+            <div class="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-surface-container-high/60 flex flex-col gap-3">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">
-                            <i class="fa-solid fa-list-check"></i>
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-[18px]">add_link</span>
                         </div>
-                        <h2 class="text-xs sm:text-sm font-semibold text-slate-200">Tracked Playlists</h2>
+                        <h2 class="text-sm font-bold text-on-surface tracking-tight">Add Pipeline Source</h2>
                     </div>
+                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Fast Ingest</span>
+                </div>
 
-                    <button onclick="triggerFullSync()" id="syncAllBtn"
-                        class="touch-action-btn px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 rounded-xl text-3xs font-semibold transition flex items-center space-x-1.5">
-                        <i class="fa-solid fa-rotate" id="syncAllIcon"></i>
-                        <span>Sync All</span>
+                <div class="relative flex items-center w-full">
+                    <span class="material-symbols-outlined absolute left-3.5 text-outline text-[20px] pointer-events-none">smart_display</span>
+                    <input type="text" id="directUrlInput" placeholder="Paste YouTube playlist, mix or video URL..."
+                        class="w-full pl-10 pr-20 py-3 rounded-full bg-surface-container-low text-on-surface placeholder:text-outline text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-inner">
+                    <button type="button" onclick="pasteFromClipboard()"
+                        class="absolute right-1.5 px-3 py-1.5 rounded-full bg-surface-container text-primary active:scale-95 transition text-xs font-bold flex items-center gap-1 shadow-sm">
+                        <span class="material-symbols-outlined text-[15px]">content_paste</span>
+                        <span>Paste</span>
                     </button>
                 </div>
 
-                <div id="playlistsList" class="divide-y divide-slate-800/80 max-h-64 overflow-y-auto pr-1">
+                <div class="flex items-center gap-2.5 pt-1">
+                    <button type="button" onclick="submitDirectLink(event)" id="directAddBtn"
+                        class="flex-1 py-2.5 px-4 rounded-full bg-primary text-on-primary text-xs font-bold flex items-center justify-center gap-1.5 shadow-[0_6px_20px_rgba(186,0,43,0.25)] active:scale-95 transition">
+                        <span class="material-symbols-outlined text-[18px]">queue_music</span>
+                        <span>+ Queue Directly</span>
+                    </button>
+                    <button type="button" onclick="inspectDirectUrl()"
+                        class="px-5 py-2.5 rounded-full bg-surface-container text-on-surface text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition hover:bg-surface-container-high">
+                        <span class="material-symbols-outlined text-[18px] text-primary">preview</span>
+                        <span>Inspect Tracks</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tracked Playlists & Sources -->
+            <div class="flex flex-col gap-3">
+                <div class="flex items-center justify-between px-1">
+                    <div>
+                        <h3 class="text-base font-bold text-on-surface tracking-tight">Active Pipelines</h3>
+                        <p class="text-xs text-on-surface-variant">Automated sources synced to Navidrome</p>
+                    </div>
+                </div>
+
+                <div id="sourcesPlaylistsList" class="flex flex-col gap-2.5">
                     {% if playlists %}
                         {% for pl in playlists %}
-                        <div class="py-2.5 flex items-center justify-between space-x-3 group">
-                            <div class="truncate flex items-center space-x-2 text-xs text-slate-300 min-w-0">
-                                <i class="fa-brands fa-youtube text-rose-500 text-xs shrink-0"></i>
-                                <span class="truncate font-mono text-3xs">{{ pl }}</span>
+                        <div class="bg-surface-container-lowest rounded-2xl p-3.5 shadow-sm border border-surface-container-high/60 flex items-center justify-between gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center text-primary shrink-0">
+                                <span class="material-symbols-outlined text-[20px]">queue_music</span>
                             </div>
-                            <div class="flex items-center space-x-1 shrink-0">
-                                <button onclick="openPlaylistModal('{{ pl }}', 'Tracked Playlist')" class="touch-action-btn text-indigo-400 hover:text-indigo-300 p-1.5 transition text-xs" title="Inspect Tracks">
-                                    <i class="fa-solid fa-eye"></i>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-xs font-bold text-on-surface truncate">{{ pl }}</h4>
+                                <span class="text-[10px] text-outline font-medium">Tracked Source</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button onclick="openPlaylistModal('{{ pl }}', 'Tracked Playlist')" class="p-2 rounded-full hover:bg-surface-container text-primary transition" title="Inspect Tracks">
+                                    <span class="material-symbols-outlined text-[18px]">visibility</span>
                                 </button>
-                                <button onclick="deletePlaylist('{{ pl }}')" class="touch-action-btn text-slate-500 hover:text-rose-400 p-1.5 transition text-xs" title="Remove link">
-                                    <i class="fa-solid fa-trash-can"></i>
+                                <button onclick="deletePlaylist('{{ pl }}')" class="p-2 rounded-full hover:bg-surface-container text-outline hover:text-error transition" title="Remove Link">
+                                    <span class="material-symbols-outlined text-[18px]">delete</span>
                                 </button>
                             </div>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <p class="text-3xs text-slate-500 italic text-center py-5">No playlists tracked yet.</p>
+                        <div class="p-10 text-center text-outline text-xs bg-surface-container-lowest rounded-2xl border border-surface-container-high/60">
+                            <span class="material-symbols-outlined text-outline text-3xl mb-2 block opacity-40">podcasts</span>
+                            No tracked sources yet. Paste a YouTube playlist above to add!
+                        </div>
                     {% endif %}
                 </div>
             </div>
         </section>
 
-        <!-- ================= TAB 4: COOKIES & AUTH ================= -->
-        <section id="tab-cookies" class="tab-content hidden space-y-3">
-            <div class="glass-panel p-4 rounded-2xl shadow-lg space-y-3">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <div class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">
-                            <i class="fa-solid fa-shield-halved"></i>
+        <!-- ================= TAB 4: YOUTUBE AUTH & SECURITY ================= -->
+        <section id="tab-cookies" class="tab-content hidden flex flex-col gap-4">
+            <!-- Hero Apple-Style Security Card -->
+            <div class="relative overflow-hidden rounded-2xl bg-surface-container-lowest p-5 shadow-sm border border-surface-container-high/60">
+                <div class="relative z-10 flex flex-col gap-3">
+                    <div class="flex items-start justify-between">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-primary-container flex items-center justify-center text-on-primary shadow-md">
+                            <span class="material-symbols-outlined text-[26px]">vpn_key</span>
                         </div>
-                        <h2 class="text-xs sm:text-sm font-semibold text-slate-200">YouTube Authentication</h2>
+                        {% if cookies_ok %}
+                        <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="text-xs font-bold">Active · Authenticated</span>
+                        </div>
+                        {% else %}
+                        <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                            <span class="text-xs font-bold">Action Required</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold tracking-tight text-on-surface">YouTube Authentication</h2>
+                        <p class="text-xs text-on-surface-variant mt-0.5">Cloud Node Session Bypass & Token Vault</p>
                     </div>
 
-                    {% if cookies_ok %}
-                    <span class="px-2 py-0.5 rounded-full text-3xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1">
-                        <i class="fa-solid fa-check"></i> Active
-                    </span>
-                    {% else %}
-                    <span class="px-2 py-0.5 rounded-full text-3xs bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium animate-pulse flex items-center gap-1">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Required
-                    </span>
-                    {% endif %}
+                    <!-- Telemetry Stats -->
+                    <div class="grid grid-cols-3 gap-2 pt-1 text-center">
+                        <div class="flex flex-col p-2.5 rounded-xl bg-surface-container-low">
+                            <span class="text-[10px] text-outline uppercase font-semibold">Status</span>
+                            <span class="text-xs text-on-surface font-bold mt-0.5">{% if cookies_ok %}Ready{% else %}Missing{% endif %}</span>
+                        </div>
+                        <div class="flex flex-col p-2.5 rounded-xl bg-surface-container-low">
+                            <span class="text-[10px] text-outline uppercase font-semibold">Format</span>
+                            <span class="text-xs text-on-surface font-bold mt-0.5">Netscape</span>
+                        </div>
+                        <div class="flex flex-col p-2.5 rounded-xl bg-surface-container-low">
+                            <span class="text-[10px] text-outline uppercase font-semibold">Bypass</span>
+                            <span class="text-xs text-primary font-bold mt-0.5">Active</span>
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-                <p class="text-3xs text-slate-400 leading-relaxed">
-                    YouTube blocks cloud datacenter IPs with <i>"Sign in to confirm you're not a bot"</i>. Pasting your browser cookies bypasses this permanently.
-                </p>
-
-                <div class="bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-xl text-3xs text-amber-300 space-y-1">
-                    <p class="font-bold">⚠️ Critical tip for exporting cookies:</p>
-                    <p>Make sure you are on <b class="underline">https://www.youtube.com</b> logged in when you export. The export must contain the <code>LOGIN_INFO</code> or <code>SAPISID</code> session cookie.</p>
+            <!-- Educational Callout -->
+            <div class="relative overflow-hidden rounded-2xl bg-error-container/40 p-4 shadow-sm border border-error/20">
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-error-container flex items-center justify-center shrink-0 text-on-error-container mt-0.5">
+                        <span class="material-symbols-outlined text-[20px]">info</span>
+                    </div>
+                    <div class="flex flex-col text-on-surface">
+                        <span class="text-xs font-bold text-on-surface">Why cookies are needed:</span>
+                        <p class="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
+                            YouTube blocks cloud datacenter IPs with <b class="text-on-surface">"Sign in to confirm you're not a bot"</b>. Pasting cookies from your browser bypasses bot detection and unlocks high-speed audio streams.
+                        </p>
+                    </div>
                 </div>
+            </div>
 
+            <!-- Verification Checklist -->
+            <div class="flex flex-col rounded-2xl bg-surface-container-lowest p-4 shadow-sm border border-surface-container-high/60 gap-2">
+                <div class="flex items-center justify-between pb-1">
+                    <span class="text-[10px] uppercase tracking-wider text-outline font-bold">Node Security Checklist</span>
+                    <span class="text-xs font-bold {% if cookies_ok %}text-emerald-600{% else %}text-amber-600{% endif %}">{% if cookies_ok %}✓ Verified{% else %}Needs Update{% endif %}</span>
+                </div>
+                <div class="space-y-1.5">
+                    <div class="flex items-center gap-2.5 p-2 rounded-xl bg-surface-container-low text-xs">
+                        <span class="material-symbols-outlined text-emerald-600 text-[18px] icon-fill">check_circle</span>
+                        <span class="text-on-surface font-medium">Logged in on <b class="underline">https://www.youtube.com</b></span>
+                    </div>
+                    <div class="flex items-center gap-2.5 p-2 rounded-xl bg-surface-container-low text-xs">
+                        <span class="material-symbols-outlined {% if cookies_ok %}text-emerald-600 icon-fill{% else %}text-amber-500{% endif %} text-[18px]">{% if cookies_ok %}check_circle{% else %}radio_button_unchecked{% endif %}</span>
+                        <span class="text-on-surface font-medium">Payload contains <code>LOGIN_INFO</code> & <code>SAPISID</code></span>
+                    </div>
+                    <div class="flex items-center gap-2.5 p-2 rounded-xl bg-surface-container-low text-xs">
+                        <span class="material-symbols-outlined text-emerald-600 text-[18px] icon-fill">check_circle</span>
+                        <span class="text-on-surface font-medium">yt-dlp stream pipeline linked</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cookies Input Form -->
+            <div class="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-surface-container-high/60">
                 <form action="/cookies" method="POST" enctype="multipart/form-data" class="space-y-3">
                     <div>
-                        <textarea name="cookies_text" rows="3" placeholder="Paste your Netscape format cookies text here..."
-                            class="w-full px-3 py-2 bg-slate-900 border border-slate-700/80 rounded-xl text-3xs font-mono focus:outline-none focus:border-amber-500 text-slate-200 placeholder-slate-600"></textarea>
+                        <label class="text-xs font-bold text-on-surface block mb-1.5">Netscape Cookies Buffer</label>
+                        <textarea name="cookies_text" rows="4" placeholder="Paste your Netscape format cookies text here..."
+                            class="w-full px-3 py-2 bg-surface-container-low border border-surface-container-high rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 text-on-surface placeholder:text-outline"></textarea>
                     </div>
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div class="text-3xs text-slate-400 flex items-center space-x-1.5">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="text-xs text-on-surface-variant flex items-center gap-1.5">
                             <span>Or upload:</span>
-                            <input type="file" name="cookies_file" accept=".txt" class="text-3xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-3xs file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
+                            <input type="file" name="cookies_file" accept=".txt" class="text-xs file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:bg-surface-container-high file:text-on-surface hover:file:bg-surface-container-highest cursor-pointer">
                         </div>
-                        <button type="submit" class="touch-action-btn px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-xl shadow transition">
+                        <button type="submit" class="px-5 py-2 bg-primary hover:bg-primary-container text-on-primary font-bold text-xs rounded-full shadow-md active:scale-95 transition">
                             Save Cookies
                         </button>
                     </div>
@@ -1068,279 +1193,316 @@ HTML_TEMPLATE = """
             </div>
         </section>
 
-        <!-- ================= TAB 5: LIVE LOGS ================= -->
-        <section id="tab-logs" class="tab-content hidden space-y-3">
-            <div class="glass-panel p-3.5 rounded-2xl shadow-lg space-y-3">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <div class="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center text-xs">
-                            <i class="fa-solid fa-terminal"></i>
-                        </div>
-                        <h2 class="text-xs sm:text-sm font-semibold text-slate-200">Live Sync Terminal</h2>
-                    </div>
+        <!-- ================= TAB 5: LIVE SYNC CONSOLE ================= -->
+        <section id="tab-logs" class="tab-content hidden flex flex-col gap-4">
+            <!-- Telemetry Header -->
+            <div class="flex items-center justify-between px-1 pt-1">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-[10px] text-outline uppercase tracking-wider font-semibold">Telemetry & Ops</span>
+                    <span class="text-outline/40">•</span>
+                    <span class="text-[10px] text-primary font-bold uppercase">Subsonic Engine</span>
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high shadow-sm">
+                    <span class="w-2 h-2 rounded-full {% if is_syncing %}bg-amber-500 animate-ping{% else %}bg-emerald-500 animate-pulse{% endif %}"></span>
+                    <span class="text-xs text-on-surface font-semibold">{% if is_syncing %}Active Ingest{% else %}Idle Pipeline{% endif %}</span>
+                </div>
+            </div>
 
-                    <div class="flex items-center space-x-2">
-                        <button onclick="stopDownload()" id="logsStopBtn"
-                            class="hidden touch-action-btn px-2 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 rounded-lg text-3xs font-semibold transition flex items-center space-x-1 animate-pulse">
-                            <i class="fa-solid fa-stop text-3xs"></i>
-                            <span>Cancel</span>
-                        </button>
-                        <label class="flex items-center space-x-1.5 text-3xs text-slate-400 cursor-pointer">
-                            <input type="checkbox" id="autoRefreshLogs" checked class="rounded border-slate-700 text-rose-500 focus:ring-0">
+            <!-- Daemon Master Status Card -->
+            <div class="relative overflow-hidden rounded-2xl bg-surface-container-lowest shadow-sm p-4 border border-surface-container-high/60">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-[22px]">terminal</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-sm font-bold text-on-surface">Sync Daemon Core</span>
+                            <span class="text-[11px] text-on-surface-variant font-mono">yt-dlp v2026.10.21</span>
+                        </div>
+                    </div>
+                    <button onclick="stopDownload()" id="logsStopBtn"
+                        class="hidden px-3 py-1 bg-error text-on-error rounded-full text-xs font-bold active:scale-95 transition shadow-sm flex items-center gap-1 animate-pulse">
+                        <span class="material-symbols-outlined text-[14px]">stop</span>
+                        <span>Cancel Sync</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Terminal Window -->
+            <div class="rounded-2xl bg-[#0f111a] p-4 shadow-xl border border-slate-800">
+                <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 text-xs">
+                    <div class="flex items-center gap-2 text-slate-400 font-mono">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                        <span class="ml-2 text-slate-300">sync.log</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer select-none">
+                            <input type="checkbox" id="autoRefreshLogs" checked class="rounded border-slate-700 text-primary focus:ring-0">
                             <span>Auto</span>
                         </label>
-                        <button onclick="fetchLogs()" class="touch-action-btn p-1.5 text-slate-400 hover:text-slate-200 text-xs">
-                            <i class="fa-solid fa-arrows-rotate"></i>
+                        <button onclick="fetchLogs()" class="text-slate-400 hover:text-slate-200 transition">
+                            <span class="material-symbols-outlined text-[16px]">refresh</span>
                         </button>
                     </div>
                 </div>
-
-                <div class="relative">
-                    <pre id="logConsole" class="bg-slate-950 p-3 rounded-xl text-3xs font-mono text-emerald-400/90 overflow-x-auto max-h-72 border border-slate-800/80 whitespace-pre-wrap leading-relaxed">{{ logs }}</pre>
-                </div>
+                <pre id="logConsole" class="text-xs font-mono text-emerald-400 overflow-x-auto max-h-80 whitespace-pre-wrap leading-relaxed">{{ logs }}</pre>
             </div>
         </section>
 
     </main>
 
-    <!-- Interactive Playlist Track Selector Modal / Bottom Sheet -->
-    <div id="playlistModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-all duration-300">
-        <div class="glass-panel w-full max-w-xl rounded-t-3xl sm:rounded-3xl border border-slate-700 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
-            <!-- Modal Header -->
-            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-                <div class="min-w-0 flex-1 pr-3">
-                    <div class="flex items-center space-x-2">
-                        <span id="plModalTypeBadge" class="px-1.5 py-0.5 rounded text-3xs font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">Playlist</span>
-                        <span id="plModalTotalBadge" class="text-3xs text-slate-400">Loading tracks...</span>
-                    </div>
-                    <h3 id="plModalTitle" class="text-sm font-bold text-white truncate mt-1">Playlist Tracks</h3>
+    <!-- Floating Miniplayer / Download Dock -->
+    <div id="floatingDock" class="fixed inset-x-0 bottom-[4.75rem] sm:bottom-20 z-40 px-4 max-w-xl mx-auto pointer-events-none transition-all duration-300 transform translate-y-32 opacity-0">
+        <div id="floatingDockBar" class="glass-panel p-3 rounded-2xl shadow-2xl border border-surface-container-high bg-surface-container-lowest/95 backdrop-blur-xl flex items-center justify-between gap-3 pointer-events-auto">
+            <!-- Left: Wave Bars Equalizer -->
+            <div id="dockEqWrap" class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                <div class="flex items-end gap-0.5 h-4">
+                    <span class="w-1 bg-primary rounded-full animate-wave-1"></span>
+                    <span class="w-1 bg-primary rounded-full animate-wave-2"></span>
+                    <span class="w-1 bg-primary rounded-full animate-wave-3"></span>
                 </div>
-                <button onclick="closePlaylistModal()" class="touch-action-btn w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs shrink-0">
-                    <i class="fa-solid fa-xmark"></i>
+            </div>
+
+            <!-- Center: Title & Progress Bar -->
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center justify-between gap-2">
+                    <p id="dockTitle" class="text-xs font-bold text-on-surface truncate">Downloading...</p>
+                    <span id="dockSpeed" class="text-[10px] font-mono font-bold text-primary shrink-0">0%</span>
+                </div>
+                <div class="w-full bg-surface-container rounded-full h-1.5 mt-1.5 overflow-hidden">
+                    <div id="dockProgressBar" class="bg-gradient-to-r from-primary to-secondary h-full rounded-full transition-all duration-300" style="width: 5%;"></div>
+                </div>
+            </div>
+
+            <!-- Right: Action Buttons -->
+            <div id="dockActionWrap" class="flex items-center gap-1 shrink-0">
+                <button onclick="stopDownload()" class="w-7 h-7 rounded-full bg-surface-container hover:bg-error/10 hover:text-error text-on-surface-variant flex items-center justify-center transition" title="Cancel">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fixed Luminous Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 w-full z-40 pb-safe bg-surface/85 backdrop-blur-xl border-t border-surface-container-high/80 shadow-[0_-1px_12px_rgba(0,0,0,0.04)]">
+        <div class="h-16 px-4 flex items-center justify-around">
+            <button onclick="switchTab('search')" id="tabBtn-search" class="bottom-nav-btn flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] transition text-primary font-bold">
+                <span class="material-symbols-outlined text-[24px]">search</span>
+                <span class="text-[11px]">Search</span>
+                <span class="tab-indicator w-1 h-1 bg-primary rounded-full mt-0.5"></span>
+            </button>
+
+            <button onclick="switchTab('library')" id="tabBtn-library" class="bottom-nav-btn flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] transition text-on-surface-variant hover:text-on-surface">
+                <span class="material-symbols-outlined text-[24px]">library_music</span>
+                <span class="text-[11px]">Library</span>
+                <span class="tab-indicator w-1 h-1 bg-primary rounded-full mt-0.5 hidden"></span>
+            </button>
+
+            <button onclick="switchTab('sources')" id="tabBtn-sources" class="bottom-nav-btn flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] transition text-on-surface-variant hover:text-on-surface">
+                <span class="material-symbols-outlined text-[24px]">podcasts</span>
+                <span class="text-[11px]">Sources</span>
+                <span class="tab-indicator w-1 h-1 bg-primary rounded-full mt-0.5 hidden"></span>
+            </button>
+
+            <button onclick="switchTab('cookies')" id="tabBtn-cookies" class="bottom-nav-btn flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] transition text-on-surface-variant hover:text-on-surface relative">
+                <span class="material-symbols-outlined text-[24px]">vpn_key</span>
+                <span class="text-[11px]">Auth</span>
+                <span class="tab-indicator w-1 h-1 bg-primary rounded-full mt-0.5 hidden"></span>
+                {% if not cookies_ok %}
+                <span class="w-2 h-2 rounded-full bg-amber-500 absolute top-1 right-3 animate-ping"></span>
+                <span class="w-2 h-2 rounded-full bg-amber-500 absolute top-1 right-3"></span>
+                {% endif %}
+            </button>
+
+            <button onclick="switchTab('logs')" id="tabBtn-logs" class="bottom-nav-btn flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] transition text-on-surface-variant hover:text-on-surface">
+                <span class="material-symbols-outlined text-[24px]">terminal</span>
+                <span class="text-[11px]">Console</span>
+                <span class="tab-indicator w-1 h-1 bg-primary rounded-full mt-0.5 hidden"></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Playlist Track Selector Modal / Bottom Sheet -->
+    <div id="playlistModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-all duration-300">
+        <div class="bg-surface-container-lowest w-full max-w-xl rounded-t-3xl sm:rounded-3xl border border-surface-container-high shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-4 border-b border-surface-container-high flex items-center justify-between">
+                <div class="min-w-0 flex-1 pr-3">
+                    <div class="flex items-center gap-2">
+                        <span id="plModalTypeBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">Playlist</span>
+                        <span id="plModalTotalBadge" class="text-xs text-outline font-medium">Loading tracks...</span>
+                    </div>
+                    <h3 id="plModalTitle" class="text-sm font-bold text-on-surface truncate mt-1">Playlist Tracks</h3>
+                </div>
+                <button onclick="closePlaylistModal()" class="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface flex items-center justify-center transition shrink-0">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>
 
             <!-- Modal Selection & Search Toolbar -->
-            <div class="px-4 py-2.5 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between gap-2 text-2xs">
-                <label class="flex items-center space-x-2 text-slate-300 cursor-pointer select-none">
-                    <input type="checkbox" id="plSelectAllCheck" onchange="toggleSelectAllPlaylist(this.checked)" checked class="rounded border-slate-700 text-rose-600 focus:ring-0">
+            <div class="px-4 py-2 bg-surface-container-low border-b border-surface-container-high flex items-center justify-between text-xs">
+                <label class="flex items-center gap-2 text-on-surface font-semibold cursor-pointer select-none">
+                    <input type="checkbox" id="plSelectAllCheck" onchange="toggleSelectAllPlaylist(this.checked)" checked class="rounded border-outline/40 text-primary focus:ring-0">
                     <span id="plSelectionSummary">Select All</span>
                 </label>
-                <span id="plSelectedCountText" class="text-rose-400 font-mono font-medium">0 selected</span>
+                <span id="plSelectedCountText" class="text-primary font-bold">0 selected</span>
             </div>
 
             <!-- Modal Scrollable Track List -->
             <div id="plModalTracksList" class="p-3 space-y-2 overflow-y-auto flex-1 min-h-[220px]">
-                <div class="p-8 text-center text-slate-400 text-xs">
-                    <i class="fa-solid fa-spinner fa-spin text-indigo-500 text-xl mb-2 block"></i>
-                    Fetching playlist tracks...
+                <div class="p-8 text-center text-outline text-xs">
+                    <span class="material-symbols-outlined text-primary text-2xl animate-spin mb-2 block">autorenew</span>
+                    Scanning playlist tracks...
                 </div>
             </div>
 
-            <!-- Modal Sticky Action Footer -->
-            <div class="p-3 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between gap-3">
-                <button onclick="closePlaylistModal()" class="touch-action-btn px-3 py-2 text-slate-400 hover:text-slate-200 text-xs font-semibold">
-                    Close
+            <!-- Modal Bottom Action Bar -->
+            <div class="p-3 bg-surface-container-lowest border-t border-surface-container-high flex items-center justify-between gap-3">
+                <button onclick="closePlaylistModal()" class="px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold text-xs active:scale-95 transition">
+                    Cancel
                 </button>
-                <button onclick="downloadSelectedPlaylistTracks()" id="plDownloadBtn"
-                    class="touch-action-btn flex-1 py-2.5 px-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
-                    <i class="fa-solid fa-download"></i>
+                <button id="plDownloadBtn" onclick="downloadSelectedPlaylistTracks()"
+                    class="flex-1 py-2.5 px-4 rounded-full bg-primary hover:bg-primary-container text-on-primary font-bold text-xs shadow-md active:scale-95 transition flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
+                    <span class="material-symbols-outlined text-[16px]">download</span>
                     <span id="plDownloadBtnText">Download Selected Tracks</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Floating Active Download & Audio Dock (Elevated safely above bottom bar) -->
-    <div id="floatingDock" class="fixed bottom-[4.75rem] sm:bottom-20 left-1/2 -translate-x-1/2 w-11/12 max-w-xl z-40 hidden transition-all duration-300 pb-[env(safe-area-inset-bottom)]">
-        <!-- Download Status Card -->
-        <div id="activeDownloadBar" class="glass-panel p-2.5 rounded-2xl shadow-2xl border border-rose-500/30 flex items-center justify-between gap-2.5 hidden">
-            <div class="flex items-center space-x-2.5 min-w-0 flex-1">
-                <div class="flex items-center justify-center w-6 h-6 shrink-0" id="dockEqContainer">
-                    <div class="flex items-end space-x-0.5 h-3.5">
-                        <span class="w-1 bg-rose-500 rounded-full eq-bar-1"></span>
-                        <span class="w-1 bg-pink-500 rounded-full eq-bar-2"></span>
-                        <span class="w-1 bg-indigo-500 rounded-full eq-bar-3"></span>
-                        <span class="w-1 bg-rose-400 rounded-full eq-bar-4"></span>
-                    </div>
-                </div>
-                <div class="min-w-0 flex-1">
-                    <p class="text-xs font-semibold text-slate-100 truncate" id="dockTrackTitle">Downloading track...</p>
-                    <div class="flex items-center space-x-2 text-3xs mt-0.5">
-                        <span id="dockSpeedText" class="text-rose-400 font-mono">0%</span>
-                        <span id="dockStatusText" class="text-slate-400 truncate">Preparing</span>
-                    </div>
-                    <div class="w-full bg-slate-800 rounded-full h-1 mt-1 overflow-hidden">
-                        <div id="dockProgressBar" class="bg-gradient-to-r from-rose-500 to-indigo-500 h-full rounded-full transition-all duration-300" style="width: 5%"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="flex items-center space-x-1 shrink-0" id="dockActionBtnWrap">
-                <button onclick="stopDownload()" class="touch-action-btn p-2 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl text-xs" title="Stop Download">
-                    <i class="fa-solid fa-stop"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Audio Preview Player Bar -->
-        <div id="audioPreviewBar" class="glass-panel p-2.5 rounded-2xl shadow-2xl border border-pink-500/30 flex items-center justify-between gap-2 hidden">
-            <div class="flex items-center space-x-2 min-w-0 flex-1">
-                <button onclick="toggleAudioPreview()" id="previewPlayBtn" class="w-8 h-8 rounded-xl bg-pink-600 hover:bg-pink-500 text-white flex items-center justify-center text-xs shrink-0 shadow">
-                    <i class="fa-solid fa-play" id="previewPlayIcon"></i>
-                </button>
-                <div class="min-w-0 flex-1">
-                    <p class="text-xs font-semibold text-slate-100 truncate" id="previewSongTitle">Playing Preview</p>
-                    <p class="text-3xs text-slate-400 truncate" id="previewSongArtist">Artist</p>
-                </div>
-            </div>
-            <audio id="globalAudioPlayer" onended="onAudioEnded()" ontimeupdate="onAudioTimeUpdate()"></audio>
-            <button onclick="closeAudioPreview()" class="touch-action-btn p-1.5 text-slate-400 hover:text-slate-200 text-xs shrink-0">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Fixed Bottom Mobile Navigation Bar -->
-    <nav class="fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-slate-800/90 shadow-2xl px-2 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        <div class="max-w-xl mx-auto flex items-center justify-around">
-            <button onclick="switchTab('search')" id="tabBtn-search" class="bottom-nav-btn flex-1 py-1.5 flex flex-col items-center justify-center text-rose-500 transition">
-                <i class="fa-solid fa-magnifying-glass text-base"></i>
-                <span class="text-3xs font-medium mt-1">Search</span>
-                <div class="tab-indicator w-1 h-1 bg-rose-500 rounded-full mt-0.5"></div>
-            </button>
-
-            <button onclick="switchTab('library')" id="tabBtn-library" class="bottom-nav-btn flex-1 py-1.5 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 transition relative">
-                <i class="fa-solid fa-music text-base"></i>
-                <span class="text-3xs font-medium mt-1">Library</span>
-                <div class="tab-indicator w-1 h-1 bg-rose-500 rounded-full mt-0.5 hidden"></div>
-            </button>
-
-            <button onclick="switchTab('sources')" id="tabBtn-sources" class="bottom-nav-btn flex-1 py-1.5 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 transition relative">
-                <i class="fa-solid fa-layer-group text-base"></i>
-                <span class="text-3xs font-medium mt-1">Sources</span>
-                <div class="tab-indicator w-1 h-1 bg-rose-500 rounded-full mt-0.5 hidden"></div>
-            </button>
-
-            <button onclick="switchTab('cookies')" id="tabBtn-cookies" class="bottom-nav-btn flex-1 py-1.5 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 transition relative">
-                <i class="fa-solid fa-cookie-bite text-base"></i>
-                <span class="text-3xs font-medium mt-1">Auth</span>
-                <div class="tab-indicator w-1 h-1 bg-rose-500 rounded-full mt-0.5 hidden"></div>
-                {% if not cookies_ok %}
-                <span class="w-2 h-2 rounded-full bg-amber-400 absolute top-1.5 right-6 animate-ping"></span>
-                <span class="w-2 h-2 rounded-full bg-amber-400 absolute top-1.5 right-6"></span>
-                {% endif %}
-            </button>
-
-            <button onclick="switchTab('logs')" id="tabBtn-logs" class="bottom-nav-btn flex-1 py-1.5 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 transition">
-                <i class="fa-solid fa-terminal text-base"></i>
-                <span class="text-3xs font-medium mt-1">Console</span>
-                <div class="tab-indicator w-1 h-1 bg-rose-500 rounded-full mt-0.5 hidden"></div>
-            </button>
-        </div>
-    </nav>
-
-    <!-- Client-Side Application Logic -->
+    <!-- Application JavaScript Logic -->
     <script>
-        // Global State
+        // State
         let allSearchResults = [];
         let displayedCount = 0;
         let currentFilter = 'all';
         const BATCH_SIZE = 8;
         
         let allLibrarySongs = [];
+        let isSelectionMode = false;
         let activeDownloadingId = null;
         let downloadedIds = new Set();
         let lastNotifiedId = null;
         let lastNotifiedStatus = null;
-
-        // Playlist Inspector Modal State
         let currentInspectedPlaylist = null;
+
+        function escapeHtml(text) {
+            return (text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
 
         // Tab Switching
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.bottom-nav-btn').forEach(btn => {
-                btn.classList.remove('text-rose-500');
-                btn.classList.add('text-slate-400');
-                const indicator = btn.querySelector('.tab-indicator');
-                if (indicator) indicator.classList.add('hidden');
+                btn.classList.remove('text-primary', 'font-bold');
+                btn.classList.add('text-on-surface-variant');
+                const ind = btn.querySelector('.tab-indicator');
+                if (ind) ind.classList.add('hidden');
             });
 
             const activeTab = document.getElementById(`tab-${tabName}`);
             const activeBtn = document.getElementById(`tabBtn-${tabName}`);
             if (activeTab && activeBtn) {
                 activeTab.classList.remove('hidden');
-                activeBtn.classList.add('text-rose-500');
-                activeBtn.classList.remove('text-slate-400');
-                const indicator = activeBtn.querySelector('.tab-indicator');
-                if (indicator) indicator.classList.remove('hidden');
+                activeBtn.classList.add('text-primary', 'font-bold');
+                activeBtn.classList.remove('text-on-surface-variant');
+                const ind = activeBtn.querySelector('.tab-indicator');
+                if (ind) ind.classList.remove('hidden');
             }
 
-            if (tabName === 'logs') {
-                fetchLogs();
-            } else if (tabName === 'library') {
-                fetchLibrary();
-            }
+            if (tabName === 'logs') fetchLogs();
+            if (tabName === 'library') fetchLibrary();
         }
 
         // Toast Messages
         function showToast(message, isError = false) {
             const toastBox = document.getElementById('toastBox');
             toastBox.innerHTML = `
-                <div class="glass-panel p-3 rounded-xl shadow-2xl flex items-center space-x-3 border ${isError ? 'border-rose-500/80 bg-rose-950/90 text-rose-200' : 'border-emerald-500/80 bg-slate-900/95 text-slate-100'}">
-                    <i class="fa-solid ${isError ? 'fa-triangle-exclamation text-rose-400' : 'fa-circle-check text-emerald-400'} text-base"></i>
-                    <p class="text-xs font-medium leading-snug">${message}</p>
+                <div class="px-4 py-2.5 rounded-full shadow-xl flex items-center gap-2 border ${isError ? 'bg-error text-on-error border-error-container' : 'bg-surface-container-lowest text-on-surface border-surface-container-high'} pointer-events-auto">
+                    <span class="material-symbols-outlined text-[18px] ${isError ? 'text-white' : 'text-emerald-500'}">${isError ? 'error' : 'check_circle'}</span>
+                    <span class="text-xs font-semibold">${message}</span>
                 </div>
             `;
             toastBox.classList.remove('opacity-0', '-translate-y-4');
             toastBox.classList.add('opacity-100', 'translate-y-0');
-
             setTimeout(() => {
                 toastBox.classList.add('opacity-0', '-translate-y-4');
                 toastBox.classList.remove('opacity-100', 'translate-y-0');
-            }, 3600);
+            }, 3500);
         }
 
-        // Mark a song card as completed
-        function markCardAsCompleted(id) {
-            if (!id) return;
-            downloadedIds.add(id);
-            const wrap = document.getElementById(`action-wrap-${id}`);
-            if (wrap) {
-                wrap.innerHTML = `
-                    <span class="done-badge px-2.5 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-3xs font-semibold flex items-center space-x-1 shadow-sm">
-                        <i class="fa-solid fa-circle-check"></i>
-                        <span>Done</span>
-                    </span>
+        // Search Handlers
+        function clearSearchInput() {
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            document.getElementById('clearSearchBtn').classList.add('opacity-0', 'pointer-events-none');
+            input.focus();
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (e.target.value.length > 0) {
+                clearBtn.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                clearBtn.classList.add('opacity-0', 'pointer-events-none');
+            }
+        });
+
+        async function doSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+
+            const list = document.getElementById('searchResultsList');
+            const loadMore = document.getElementById('loadMoreContainer');
+            const countBadge = document.getElementById('searchResultCountBadge');
+
+            list.innerHTML = `
+                <div class="col-span-full p-12 text-center text-outline text-xs">
+                    <span class="material-symbols-outlined text-primary text-3xl animate-spin mb-2 block">autorenew</span>
+                    Searching YouTube pipeline...
+                </div>
+            `;
+            loadMore.classList.add('hidden');
+            countBadge.innerText = '';
+
+            try {
+                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                allSearchResults = data.results || [];
+                displayedCount = 0;
+                list.innerHTML = '';
+
+                if (allSearchResults.length === 0) {
+                    list.innerHTML = `
+                        <div class="col-span-full p-10 text-center text-outline text-xs">
+                            No tracks found for "${escapeHtml(query)}". Try another query or paste a direct link.
+                        </div>
+                    `;
+                    return;
+                }
+
+                countBadge.innerText = `${allSearchResults.length} found`;
+                renderBatch();
+            } catch (err) {
+                list.innerHTML = `
+                    <div class="col-span-full p-10 text-center text-error text-xs">
+                        Search failed: ${escapeHtml(err.message)}
+                    </div>
                 `;
             }
         }
 
-        // Mark a song card as failed
-        function markCardAsFailed(id, error) {
-            if (!id) return;
-            const wrap = document.getElementById(`action-wrap-${id}`);
-            if (wrap) {
-                wrap.innerHTML = `
-                    <button onclick="downloadTrack('', '${id}', '', this)" class="px-2.5 py-1.5 bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 rounded-xl text-3xs font-semibold flex items-center space-x-1 shadow-sm" title="${escapeHtml(error || 'Failed')}">
-                        <i class="fa-solid fa-circle-exclamation text-rose-400"></i>
-                        <span>Failed</span>
-                    </button>
-                `;
-            }
-        }
-
-        // Search Filter (All / Songs / Playlists / Radios)
         function setSearchFilter(cat) {
             currentFilter = cat;
             document.querySelectorAll('.filter-chip').forEach(btn => {
-                btn.className = "filter-chip touch-action-btn px-2.5 py-1 rounded-xl text-3xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700/60 flex items-center space-x-1 shrink-0";
+                btn.className = "filter-chip px-4 py-1.5 rounded-full text-xs font-semibold transition-all bg-surface-container text-on-surface-variant hover:text-on-surface shrink-0 active:scale-95 flex items-center gap-1.5";
             });
             const activeChip = document.getElementById(`filterBtn-${cat}`);
             if (activeChip) {
-                activeChip.className = "filter-chip touch-action-btn px-2.5 py-1 rounded-xl text-3xs font-semibold bg-rose-600 text-white shadow-sm flex items-center space-x-1 shrink-0";
+                activeChip.className = "filter-chip px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm bg-primary text-on-primary shrink-0 active:scale-95 flex items-center gap-1.5";
             }
-            
             const list = document.getElementById('searchResultsList');
             list.innerHTML = '';
             displayedCount = 0;
@@ -1352,12 +1514,9 @@ HTML_TEMPLATE = """
             return allSearchResults.filter(item => item.category === currentFilter);
         }
 
-        // Batch Rendering for Search
         function renderBatch() {
             const list = document.getElementById('searchResultsList');
-            const loadMoreContainer = document.getElementById('loadMoreContainer');
-            const loadMoreBtnText = document.getElementById('loadMoreBtnText');
-
+            const loadMore = document.getElementById('loadMoreContainer');
             const filtered = getFilteredResults();
             const nextBatch = filtered.slice(displayedCount, displayedCount + BATCH_SIZE);
             displayedCount += nextBatch.length;
@@ -1365,13 +1524,13 @@ HTML_TEMPLATE = """
             const html = nextBatch.map(item => {
                 const isCompleted = downloadedIds.has(item.id) || item.in_library;
                 const isDownloadingThis = activeDownloadingId && (activeDownloadingId === item.id || activeDownloadingId === item.url);
-                const isPlaylist = item.category === 'playlist' || item.type === 'playlist';
+                const isPlaylist = item.category === 'playlist' || item.type === 'playlist' || item.category === 'radio' || item.type === 'radio';
 
                 let actionHtml = '';
                 if (isCompleted) {
                     actionHtml = `
-                        <span class="done-badge px-2.5 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-3xs font-semibold flex items-center space-x-1 shadow-sm">
-                            <i class="fa-solid fa-circle-check"></i>
+                        <span class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[13px] icon-fill">check_circle</span>
                             <span>Saved</span>
                         </span>
                     `;
@@ -1380,166 +1539,89 @@ HTML_TEMPLATE = """
                 } else if (isPlaylist) {
                     actionHtml = `
                         <button onclick="openPlaylistModal('${item.url}', '${escapeHtml(item.title)}')"
-                            class="touch-action-btn px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-3xs rounded-xl shadow-md transition flex items-center space-x-1 shrink-0">
-                            <i class="fa-solid fa-list-check"></i>
+                            class="px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs flex items-center gap-1 active:scale-95 transition shadow-sm">
+                            <span class="material-symbols-outlined text-[15px]">queue_music</span>
                             <span>Tracks</span>
                         </button>
                     `;
                 } else {
                     actionHtml = `
                         <button onclick="downloadTrack('${item.url}', '${item.id}', '${escapeHtml(item.title)}', this)"
-                            class="touch-action-btn px-3 py-1.5 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-semibold text-3xs rounded-xl shadow-md transition flex items-center space-x-1 shrink-0">
-                            <i class="fa-solid fa-download"></i>
-                            <span>Get</span>
+                            class="w-9 h-9 rounded-full bg-primary hover:bg-primary-container text-on-primary flex items-center justify-center shadow-md active:scale-95 transition" title="Download Audio">
+                            <span class="material-symbols-outlined text-[20px]">add</span>
                         </button>
                     `;
                 }
 
                 return `
-                <div class="glass-panel p-2.5 rounded-2xl flex items-center justify-between gap-3 hover:border-slate-700 transition relative" id="search-card-${item.id}">
-                    <!-- Left: Square Thumbnail -->
-                    <div class="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-950 border border-slate-800">
+                <div class="bg-surface-container-lowest rounded-2xl p-3 shadow-sm border border-surface-container-high/60 flex items-center justify-between gap-3 hover:border-surface-container-highest transition" id="search-card-${item.id}">
+                    <div class="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-surface-container shadow-sm">
                         <img src="${item.thumbnail}" alt="" class="w-full h-full object-cover" loading="lazy">
-                        ${item.duration ? `<span class="absolute bottom-1 right-1 bg-black/85 text-white text-3xs px-1 py-0.2 rounded font-mono font-medium">${item.duration}</span>` : ''}
-                        ${isPlaylist ? `<div class="absolute inset-0 bg-black/40 flex items-center justify-center"><i class="fa-solid fa-list text-white text-xs"></i></div>` : ''}
+                        ${item.duration ? `<span class="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] px-1 rounded font-mono font-medium">${item.duration}</span>` : ''}
                     </div>
 
-                    <!-- Center: Full Title (2 Lines) & Metadata -->
                     <div class="min-w-0 flex-1">
-                        <h3 class="text-xs font-semibold text-slate-100 line-clamp-2 leading-snug break-words" title="${escapeHtml(item.title)}">${item.title}</h3>
-                        <div class="text-3xs text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
-                            <span class="truncate max-w-[130px]">${item.channel}</span>
-                            <span class="px-1.5 py-0.2 rounded font-medium ${
-                                item.category === 'song' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                                item.category === 'playlist' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
-                                'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            }">${item.category === 'song' ? '🎵 Song' : item.category === 'playlist' ? '📁 Playlist' : '📻 Radio'}</span>
+                        <h4 class="text-xs font-bold text-on-surface line-clamp-2 leading-snug">${item.title}</h4>
+                        <div class="text-[10px] text-outline mt-1 flex items-center gap-1.5 flex-wrap">
+                            <span class="truncate max-w-[120px]">${item.channel}</span>
+                            <span class="px-1.5 py-0.2 rounded font-semibold ${item.category === 'song' ? 'bg-primary/10 text-primary' : 'bg-secondary-fixed text-on-secondary-fixed'}">
+                                ${item.category === 'song' ? 'Song' : item.category === 'playlist' ? 'Playlist' : 'Mix'}
+                            </span>
                         </div>
                     </div>
 
-                    <!-- Right: Download Action / Visualizer Progress -->
-                    <div class="shrink-0 flex items-center" id="action-wrap-${item.id}">
+                    <div id="action-wrap-${item.id}" class="shrink-0">
                         ${actionHtml}
                     </div>
                 </div>
-            `}).join('');
+                `;
+            }).join('');
 
             list.insertAdjacentHTML('beforeend', html);
 
             if (displayedCount < filtered.length) {
-                loadMoreContainer.classList.remove('hidden');
-                loadMoreBtnText.innerText = `Load More (+${Math.min(BATCH_SIZE, filtered.length - displayedCount)})`;
+                loadMore.classList.remove('hidden');
             } else {
-                loadMoreContainer.classList.add('hidden');
+                loadMore.classList.add('hidden');
             }
         }
 
         function renderInCardProgress(item) {
             return `
-                <div class="w-24 sm:w-28 flex flex-col items-end space-y-1">
-                    <div class="flex items-center space-x-1 text-3xs font-mono text-rose-400">
-                        <div class="flex items-end space-x-0.5 h-3">
-                            <span class="w-0.5 bg-rose-500 rounded-full eq-bar-1"></span>
-                            <span class="w-0.5 bg-pink-500 rounded-full eq-bar-2"></span>
-                            <span class="w-0.5 bg-indigo-500 rounded-full eq-bar-3"></span>
-                        </div>
-                        <span id="card-pct-${item.id}">5%</span>
-                    </div>
-                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div id="card-bar-${item.id}" class="bg-gradient-to-r from-rose-500 to-indigo-500 h-full rounded-full transition-all duration-300" style="width: 15%"></div>
-                    </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold animate-pulse">
+                    <span class="material-symbols-outlined text-[14px] animate-spin">autorenew</span>
+                    <span>Syncing...</span>
                 </div>
             `;
         }
 
-        function loadMoreResults() {
-            renderBatch();
-        }
-
-        function escapeHtml(text) {
-            return (text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        }
-
-        async function doSearch() {
-            const input = document.getElementById('searchInput');
-            const query = input.value.trim();
-            if (!query) return;
-
-            const btn = document.getElementById('searchBtn');
-            const clearBtn = document.getElementById('clearSearchBtn');
-            const section = document.getElementById('searchResultsSection');
-            const placeholder = document.getElementById('searchPlaceholder');
-            const list = document.getElementById('searchResultsList');
-            const loadMoreContainer = document.getElementById('loadMoreContainer');
-
-            clearBtn.classList.remove('hidden');
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-            btn.disabled = true;
-
-            placeholder.classList.add('hidden');
-            section.classList.remove('hidden');
-            loadMoreContainer.classList.add('hidden');
-
-            list.innerHTML = `
-                <div class="p-8 text-center text-slate-400 text-xs">
-                    <i class="fa-solid fa-spinner fa-spin text-rose-500 text-xl mb-2 block"></i>
-                    Searching YouTube for "${query}"...
-                </div>
-            `;
-
-            try {
-                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-                const data = await res.json();
-
-                if (!data.results || data.results.length === 0) {
-                    list.innerHTML = `
-                        <div class="p-8 text-center text-slate-400 text-xs">
-                            <i class="fa-solid fa-face-frown text-slate-500 text-xl mb-2 block"></i>
-                            No results found for "${query}". Try different terms.
-                        </div>
-                    `;
-                    return;
-                }
-
-                allSearchResults = data.results;
-                
-                // Update Filter Counts
-                const songsCount = allSearchResults.filter(i => i.category === 'song').length;
-                const playlistsCount = allSearchResults.filter(i => i.category === 'playlist').length;
-                const radiosCount = allSearchResults.filter(i => i.category === 'radio').length;
-
-                document.getElementById('filterCount-all').innerText = allSearchResults.length;
-                document.getElementById('filterCount-song').innerText = songsCount;
-                document.getElementById('filterCount-playlist').innerText = playlistsCount;
-                document.getElementById('filterCount-radio').innerText = radiosCount;
-
-                displayedCount = 0;
-                list.innerHTML = '';
-                renderBatch();
-
-            } catch (err) {
-                list.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs">Search error: ${err.message}</div>`;
-            } finally {
-                btn.innerHTML = '<i class="fa-solid fa-arrow-right"></i><span>Find</span>';
-                btn.disabled = false;
+        function markCardAsCompleted(id) {
+            if (!id) return;
+            downloadedIds.add(id);
+            const wrap = document.getElementById(`action-wrap-${id}`);
+            if (wrap) {
+                wrap.innerHTML = `
+                    <span class="done-badge px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[13px] icon-fill">check_circle</span>
+                        <span>Saved</span>
+                    </span>
+                `;
             }
         }
 
-        function quickSearch(term) {
-            document.getElementById('searchInput').value = term;
-            doSearch();
+        function markCardAsFailed(id, error) {
+            if (!id) return;
+            const wrap = document.getElementById(`action-wrap-${id}`);
+            if (wrap) {
+                wrap.innerHTML = `
+                    <button onclick="downloadTrack('', '${id}', 'Retry', this)" class="px-2.5 py-1 rounded-full bg-error/10 text-error text-[10px] font-bold border border-error/20 flex items-center gap-1 hover:bg-error hover:text-white transition" title="Retry download">
+                        <span class="material-symbols-outlined text-[13px]">refresh</span>
+                        <span>Retry</span>
+                    </button>
+                `;
+            }
         }
 
-        function clearSearch() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('clearSearchBtn').classList.add('hidden');
-            document.getElementById('searchResultsSection').classList.add('hidden');
-            document.getElementById('searchPlaceholder').classList.remove('hidden');
-            allSearchResults = [];
-            displayedCount = 0;
-        }
-
-        // Single Track Download Action
         async function downloadTrack(url, id, title, btnElement) {
             activeDownloadingId = id;
             if (btnElement) {
@@ -1563,7 +1645,7 @@ HTML_TEMPLATE = """
                     status: 'downloading'
                 });
             } catch (err) {
-                showToast("Failed to start download", true);
+                showToast("Failed to queue download", true);
             }
         }
 
@@ -1583,9 +1665,9 @@ HTML_TEMPLATE = """
             btn.disabled = false;
 
             list.innerHTML = `
-                <div class="p-8 text-center text-slate-400 text-xs">
-                    <i class="fa-solid fa-spinner fa-spin text-indigo-500 text-xl mb-2 block"></i>
-                    Scanning playlist tracks...
+                <div class="p-8 text-center text-outline text-xs">
+                    <span class="material-symbols-outlined text-primary text-2xl animate-spin mb-2 block">autorenew</span>
+                    Scanning tracks...
                 </div>
             `;
 
@@ -1595,7 +1677,7 @@ HTML_TEMPLATE = """
 
                 if (!res.ok || !data || !data.tracks || data.tracks.length === 0) {
                     const errorMsg = (data && data.error) ? data.error : "Could not load playlist tracks. Make sure playlist is public or unlisted.";
-                    list.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs">${escapeHtml(errorMsg)}</div>`;
+                    list.innerHTML = `<div class="p-6 text-center text-error text-xs">${escapeHtml(errorMsg)}</div>`;
                     totalBadge.innerText = "0 tracks";
                     return;
                 }
@@ -1616,7 +1698,7 @@ HTML_TEMPLATE = """
                 updatePlaylistSelectionCount();
 
             } catch (err) {
-                list.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs">Error inspecting tracks: ${escapeHtml(err.message)}</div>`;
+                list.innerHTML = `<div class="p-6 text-center text-error text-xs">Error inspecting tracks: ${escapeHtml(err.message)}</div>`;
             }
         }
 
@@ -1627,28 +1709,25 @@ HTML_TEMPLATE = """
                 const isChecked = !isSaved;
 
                 return `
-                <div class="glass-panel p-2 rounded-xl flex items-center justify-between gap-2.5 hover:border-slate-700 transition" id="pl-track-row-${tr.id}">
+                <div class="p-2.5 rounded-xl bg-surface-container-low flex items-center justify-between gap-2.5 hover:bg-surface-container transition" id="pl-track-row-${tr.id}">
                     <input type="checkbox" data-track-id="${tr.id}" data-idx="${idx}" ${isChecked ? 'checked' : ''}
-                        onchange="updatePlaylistSelectionCount()" class="pl-track-check rounded border-slate-700 text-rose-600 focus:ring-0 shrink-0">
+                        onchange="updatePlaylistSelectionCount()" class="pl-track-check rounded border-outline/40 text-primary focus:ring-0 shrink-0 w-4 h-4">
 
-                    <div class="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-950 border border-slate-800">
+                    <div class="relative w-11 h-11 rounded-lg overflow-hidden shrink-0 bg-surface-container shadow-sm">
                         <img src="${tr.thumbnail}" alt="" class="w-full h-full object-cover">
-                        ${tr.duration ? `<span class="absolute bottom-0.5 right-0.5 bg-black/80 text-white text-3xs px-1 rounded font-mono">${tr.duration}</span>` : ''}
+                        ${tr.duration ? `<span class="absolute bottom-0.5 right-0.5 bg-black/80 text-white text-[8px] px-1 rounded font-mono">${tr.duration}</span>` : ''}
                     </div>
 
                     <div class="min-w-0 flex-1">
-                        <p class="text-xs font-semibold text-slate-100 line-clamp-1 leading-snug break-words">${tr.title}</p>
-                        <div class="text-3xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+                        <p class="text-xs font-bold text-on-surface line-clamp-1 leading-snug">${tr.title}</p>
+                        <div class="text-[10px] text-outline mt-0.5 flex items-center gap-1.5">
                             <span class="truncate max-w-[120px]">${tr.uploader}</span>
-                            ${isSaved ? '<span class="px-1.5 py-0.2 rounded text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 font-medium">✓ In Library</span>' : ''}
+                            ${isSaved ? '<span class="px-1.5 py-0.2 rounded text-emerald-700 bg-emerald-100 font-bold text-[9px]">✓ In Library</span>' : ''}
                         </div>
                     </div>
-
-                    <div class="shrink-0 text-3xs font-mono" id="pl-track-status-${tr.id}">
-                        ${isSaved ? '<span class="text-emerald-400"><i class="fa-solid fa-check"></i></span>' : '<span class="text-slate-500">Ready</span>'}
-                    </div>
                 </div>
-            `}).join('');
+                `;
+            }).join('');
         }
 
         function toggleSelectAllPlaylist(checked) {
@@ -1666,7 +1745,7 @@ HTML_TEMPLATE = """
             const btn = document.getElementById('plDownloadBtn');
 
             if (selectedCountText) selectedCountText.innerText = `${count} of ${total} selected`;
-            if (actionBtnText) actionBtnText.innerText = `Download Selected (${count} tracks)`;
+            if (actionBtnText) actionBtnText.innerText = `Download Selected (${count} track${count === 1 ? '' : 's'})`;
             if (btn) btn.disabled = (count === 0);
         }
 
@@ -1675,7 +1754,7 @@ HTML_TEMPLATE = """
 
             const selectedChecks = Array.from(document.querySelectorAll('.pl-track-check:checked'));
             if (selectedChecks.length === 0) {
-                showToast("Please select at least 1 track to download", true);
+                showToast("Please select at least 1 track", true);
                 return;
             }
 
@@ -1686,7 +1765,7 @@ HTML_TEMPLATE = """
 
             const btn = document.getElementById('plDownloadBtn');
             btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Starting batch (${selectedTracks.length} tracks)...</span>`;
+            btn.innerHTML = `<span class="material-symbols-outlined text-[16px] animate-spin">autorenew</span><span>Starting batch (${selectedTracks.length} tracks)...</span>`;
 
             try {
                 const res = await fetch('/api/playlist/download_selected', {
@@ -1703,7 +1782,7 @@ HTML_TEMPLATE = """
             } catch (err) {
                 showToast("Failed to queue playlist tracks", true);
                 btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-download"></i><span>Download Selected Tracks</span>`;
+                btn.innerHTML = `<span class="material-symbols-outlined text-[16px]">download</span><span>Download Selected Tracks</span>`;
             }
         }
 
@@ -1711,7 +1790,7 @@ HTML_TEMPLATE = """
             document.getElementById('playlistModal').classList.add('hidden');
         }
 
-        // Direct Link Inspection from Sources Tab
+        // Direct Link Ingest from Sources Tab
         function inspectDirectUrl() {
             const input = document.getElementById('directUrlInput');
             const url = input.value.trim();
@@ -1722,7 +1801,6 @@ HTML_TEMPLATE = """
             openPlaylistModal(url, "Inspecting Link");
         }
 
-        // Direct Link Submission
         async function submitDirectLink(e) {
             e.preventDefault();
             const input = document.getElementById('directUrlInput');
@@ -1731,7 +1809,7 @@ HTML_TEMPLATE = """
             if (!url) return;
 
             btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Adding...</span>';
+            btn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">autorenew</span><span>Adding...</span>';
 
             try {
                 const formData = new FormData();
@@ -1739,181 +1817,317 @@ HTML_TEMPLATE = """
                 formData.append('sync_now', 'true');
 
                 await fetch('/add', { method: 'POST', body: formData });
-                showToast("Link added to tracking list!");
+                showToast("Added and sync triggered!");
                 input.value = '';
-                setTimeout(() => location.reload(), 800);
-            } catch (err) {
-                showToast("Error adding link", true);
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-plus"></i><span>Queue All Directly</span>';
+                btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">queue_music</span><span>+ Queue Directly</span>';
+                setTimeout(() => location.reload(), 1500);
+            } catch (err) {
+                showToast("Failed to add source", true);
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">queue_music</span><span>+ Queue Directly</span>';
             }
         }
 
-        // Delete Playlist
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    document.getElementById('directUrlInput').value = text;
+                    showToast("Pasted from clipboard!");
+                }
+            } catch (err) {
+                showToast("Could not access clipboard", true);
+            }
+        }
+
         async function deletePlaylist(url) {
-            if (!confirm("Remove this link from auto sync?")) return;
+            if (!confirm("Are you sure you want to remove this source?")) return;
             const formData = new FormData();
             formData.append('url', url);
             await fetch('/delete', { method: 'POST', body: formData });
-            showToast("Removed from tracking list");
-            setTimeout(() => location.reload(), 600);
+            location.reload();
         }
 
-        // Trigger Full Sync
-        async function triggerFullSync() {
-            const btn = document.getElementById('syncAllBtn');
-            const icon = document.getElementById('syncAllIcon');
-            icon.classList.add('fa-spin');
-            btn.disabled = true;
-
-            await fetch('/sync', { method: 'POST' });
-            showToast("Full sync started for all playlists!");
-
-            setTimeout(() => {
-                icon.classList.remove('fa-spin');
-                btn.disabled = false;
-            }, 2000);
-        }
-
-        // Stop / Abort Download
-        async function stopDownload() {
-            if (!confirm("Are you sure you want to stop the active download?")) return;
-            try {
-                await fetch('/api/stop', { method: 'POST' });
-                showToast("Download cancelled.");
-                activeDownloadingId = null;
-                hideDownloadDock();
-                updateStatusBadge(false);
-            } catch (err) {
-                showToast("Failed to stop download", true);
-            }
-        }
-
-        // ================= LIBRARY MANAGEMENT & BULK DELETE =================
+        // ================= LIBRARY MANAGEMENT =================
         async function fetchLibrary() {
-            const list = document.getElementById('librarySongsList');
-            const summary = document.getElementById('libSummaryText');
-            const refreshIcon = document.getElementById('libRefreshIcon');
-            if (refreshIcon) refreshIcon.classList.add('fa-spin');
+            const list = document.getElementById('libraryTracksList');
+            const countBadge = document.getElementById('libTotalTracksBadge');
+            list.innerHTML = `
+                <div class="p-8 text-center text-outline text-xs">
+                    <span class="material-symbols-outlined text-primary text-2xl animate-spin mb-2 block">autorenew</span>
+                    Reading library files...
+                </div>
+            `;
 
             try {
                 const res = await fetch('/api/library');
                 const data = await res.json();
-                allLibrarySongs = data.songs || [];
-                summary.innerText = `${data.total_count} tracks • ${data.storage_display} stored`;
-                renderLibrary(allLibrarySongs);
-                updateLibrarySelectionCount();
+                allLibrarySongs = data.tracks || [];
+
+                countBadge.innerText = `${allLibrarySongs.length} track${allLibrarySongs.length === 1 ? '' : 's'}`;
+                renderLibraryList(allLibrarySongs);
             } catch (err) {
-                list.innerHTML = `<div class="p-4 text-center text-rose-400 text-xs">Failed to load library: ${err.message}</div>`;
-            } finally {
-                if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+                list.innerHTML = `<div class="p-8 text-center text-error text-xs">Failed to load library: ${err.message}</div>`;
             }
         }
 
-        function filterLibrary(query) {
-            const q = query.toLowerCase().trim();
-            if (!q) {
-                renderLibrary(allLibrarySongs);
+        function filterLibraryList(q) {
+            const term = (q || '').toLowerCase();
+            const filtered = allLibrarySongs.filter(t => 
+                (t.title || '').toLowerCase().includes(term) ||
+                (t.artist || '').toLowerCase().includes(term) ||
+                (t.album || '').toLowerCase().includes(term)
+            );
+            renderLibraryList(filtered);
+        }
+
+        // --- Navidrome Library Rescan ---
+        async function triggerRescan() {
+            const icon = document.getElementById('rescanIcon');
+            if (icon) icon.classList.add('animate-spin');
+            showToast("Rescanning Navidrome library...");
+            try {
+                const res = await fetch('/api/library/rescan', { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast("✓ Navidrome library scan completed!");
+                    fetchLibrary();
+                } else {
+                    showToast(`Rescan failed: ${data.message || 'Error'}`, true);
+                }
+            } catch (e) {
+                showToast(`Rescan error: ${e.message}`, true);
+            } finally {
+                if (icon) icon.classList.remove('animate-spin');
+            }
+        }
+
+        // --- Audio Preview Player ---
+        let activeAudio = null;
+        let activeAudioPath = null;
+
+        function toggleAudioPreview(path, title, artist) {
+            if (activeAudioPath === path && activeAudio) {
+                if (activeAudio.paused) {
+                    activeAudio.play();
+                    setPreviewIcon(path, 'pause_circle');
+                    updateAudioPreviewDock(title, artist, false);
+                } else {
+                    activeAudio.pause();
+                    setPreviewIcon(path, 'play_circle');
+                    updateAudioPreviewDock(title, artist, true);
+                }
                 return;
             }
-            const filtered = allLibrarySongs.filter(s =>
-                s.title.toLowerCase().includes(q) ||
-                s.artist.toLowerCase().includes(q) ||
-                s.album.toLowerCase().includes(q)
-            );
-            renderLibrary(filtered);
-            updateLibrarySelectionCount();
+
+            if (activeAudio) {
+                activeAudio.pause();
+                if (activeAudioPath) setPreviewIcon(activeAudioPath, 'play_circle');
+                activeAudio = null;
+            }
+
+            activeAudioPath = path;
+            activeAudio = new Audio(`/api/library/stream?path=${encodeURIComponent(path)}`);
+            setPreviewIcon(path, 'pause_circle');
+            updateAudioPreviewDock(title, artist, false);
+
+            activeAudio.ontimeupdate = () => {
+                if (!activeAudio || activeDownloadingId) return;
+                const pct = (activeAudio.currentTime / (activeAudio.duration || 1)) * 100;
+                const curMin = Math.floor(activeAudio.currentTime / 60);
+                const curSec = Math.floor(activeAudio.currentTime % 60).toString().padStart(2, '0');
+                const durMin = Math.floor((activeAudio.duration || 0) / 60);
+                const durSec = Math.floor((activeAudio.duration || 0) % 60).toString().padStart(2, '0');
+                const timeStr = `${curMin}:${curSec} / ${durMin}:${durSec}`;
+
+                const progress = document.getElementById('dockProgressBar');
+                const speed = document.getElementById('dockSpeed');
+                if (progress) progress.style.width = `${pct}%`;
+                if (speed) speed.innerText = timeStr;
+            };
+
+            activeAudio.onended = () => {
+                stopAudioPreview();
+            };
+
+            activeAudio.onerror = () => {
+                showToast('Audio preview stream failed', true);
+                stopAudioPreview();
+            };
+
+            activeAudio.play().catch(e => {
+                console.warn("Audio playback blocked:", e);
+            });
         }
 
-        function renderLibrary(songs) {
-            const list = document.getElementById('librarySongsList');
-            if (!songs || songs.length === 0) {
+        function setPreviewIcon(path, iconName) {
+            const btn = document.getElementById(`preview-btn-${path}`);
+            if (btn) btn.innerHTML = `<span class="material-symbols-outlined text-[22px]">${iconName}</span>`;
+        }
+
+        function updateAudioPreviewDock(title, artist, isPaused) {
+            const dock = document.getElementById('floatingDock');
+            const titleEl = document.getElementById('dockTitle');
+            const speedEl = document.getElementById('dockSpeed');
+            const progress = document.getElementById('dockProgressBar');
+            const actionWrap = document.getElementById('dockActionWrap');
+            const eqWrap = document.getElementById('dockEqWrap');
+
+            dock.classList.remove('opacity-0', 'translate-y-32', 'pointer-events-none');
+            dock.classList.add('opacity-100', 'translate-y-0');
+
+            titleEl.innerText = title;
+            speedEl.innerText = artist || "Preview";
+            progress.className = "bg-primary h-full rounded-full transition-all duration-200";
+
+            if (isPaused) {
+                eqWrap.innerHTML = '<span class="material-symbols-outlined text-outline text-[20px]">pause</span>';
+            } else {
+                eqWrap.innerHTML = `
+                    <div class="flex items-end gap-0.5 h-4">
+                        <span class="w-1 bg-primary rounded-full animate-wave-1"></span>
+                        <span class="w-1 bg-primary rounded-full animate-wave-2"></span>
+                        <span class="w-1 bg-primary rounded-full animate-wave-3"></span>
+                    </div>
+                `;
+            }
+
+            actionWrap.innerHTML = `
+                <button onclick="toggleAudioPreview('${escapeHtml(activeAudioPath)}', '${escapeHtml(title)}', '${escapeHtml(artist)}')"
+                    class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center active:scale-95 transition" title="${isPaused ? 'Resume' : 'Pause'}">
+                    <span class="material-symbols-outlined text-[18px]">${isPaused ? 'play_arrow' : 'pause'}</span>
+                </button>
+                <button onclick="stopAudioPreview()" class="w-6 h-6 rounded-full flex items-center justify-center text-outline hover:text-on-surface" title="Close Preview">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+            `;
+        }
+
+        function stopAudioPreview() {
+            if (activeAudio) {
+                activeAudio.pause();
+                activeAudio = null;
+            }
+            if (activeAudioPath) {
+                setPreviewIcon(activeAudioPath, 'play_circle');
+                activeAudioPath = null;
+            }
+            if (!activeDownloadingId) {
+                hideDownloadDock();
+            }
+        }
+
+        function renderLibraryList(tracks) {
+            const list = document.getElementById('libraryTracksList');
+            if (tracks.length === 0) {
                 list.innerHTML = `
-                    <div class="p-8 text-center text-slate-500 text-xs italic">
-                        <i class="fa-solid fa-folder-open text-xl mb-1.5 block"></i>
-                        No matching songs found in library.
+                    <div class="p-8 text-center text-outline text-xs bg-surface-container-lowest rounded-2xl border border-surface-container-high/60">
+                        No songs found in your library.
                     </div>
                 `;
                 return;
             }
 
-            list.innerHTML = songs.map(song => `
-                <div class="glass-panel p-2.5 rounded-2xl flex items-center justify-between gap-2.5 hover:border-slate-700 transition" id="lib-song-${escapePathId(song.path)}">
-                    <!-- Multi-Select Checkbox -->
-                    <input type="checkbox" data-song-path="${escapeHtml(song.path)}" onchange="updateLibrarySelectionCount()"
-                        class="lib-song-check rounded border-slate-700 text-pink-600 focus:ring-0 shrink-0">
+            list.innerHTML = tracks.map(tr => `
+                <div class="p-3 rounded-2xl bg-surface-container-lowest shadow-sm border border-surface-container-high/60 flex items-center justify-between gap-3 hover:border-surface-container-highest transition" id="lib-row-${escapeHtml(tr.path)}">
+                    <!-- Checkbox (Visible in Selection Mode) -->
+                    <input type="checkbox" data-path="${escapeHtml(tr.path)}"
+                        onchange="updateBatchCount()"
+                        class="lib-select-check ${isSelectionMode ? '' : 'hidden'} rounded border-outline/40 text-primary focus:ring-0 w-4 h-4 shrink-0">
 
-                    <!-- Play Preview Button -->
-                    <button onclick="playSongPreview('${escapeHtml(song.path)}', '${escapeHtml(song.title)}', '${escapeHtml(song.artist)}')"
-                        class="w-8 h-8 rounded-xl bg-pink-600/20 hover:bg-pink-600 text-pink-400 hover:text-white flex items-center justify-center text-xs shrink-0 transition" title="Preview track">
-                        <i class="fa-solid fa-play"></i>
-                    </button>
-
-                    <!-- Title & Details -->
-                    <div class="min-w-0 flex-1">
-                        <h4 class="text-xs font-semibold text-slate-100 line-clamp-1 leading-snug break-words" title="${escapeHtml(song.title)}">${song.title}</h4>
-                        <div class="text-3xs text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                            <span class="truncate max-w-[110px]">${song.artist}</span>
-                            <span>•</span>
-                            <span>${song.size_mb} MB</span>
-                            <span>•</span>
-                            <span class="hidden sm:inline">${song.date}</span>
+                    <!-- Thumbnail / Play trigger -->
+                    <div onclick="toggleAudioPreview('${escapeHtml(tr.path)}', '${escapeHtml(tr.title)}', '${escapeHtml(tr.artist || 'Unknown Artist')}')"
+                        class="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-surface-container shadow-sm flex items-center justify-center text-primary cursor-pointer group">
+                        <span class="material-symbols-outlined text-[20px] group-hover:scale-110 transition">music_note</span>
+                        <div class="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span class="material-symbols-outlined text-white text-[18px]">play_arrow</span>
                         </div>
                     </div>
 
-                    <!-- Delete Button -->
-                    <button onclick="deleteSong('${escapeHtml(song.path)}', '${escapeHtml(song.title)}')"
-                        class="touch-action-btn p-1.5 text-slate-500 hover:text-rose-400 transition text-xs shrink-0" title="Delete song from server">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </button>
+                    <!-- Meta -->
+                    <div class="min-w-0 flex-1">
+                        <h4 class="text-xs font-bold text-on-surface truncate">${escapeHtml(tr.title)}</h4>
+                        <div class="text-[10px] text-outline mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span class="truncate max-w-[130px]">${escapeHtml(tr.artist || 'Unknown Artist')}</span>
+                            <span class="px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant font-semibold">320k MP3</span>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="shrink-0 flex items-center gap-1">
+                        <button id="preview-btn-${escapeHtml(tr.path)}"
+                            onclick="toggleAudioPreview('${escapeHtml(tr.path)}', '${escapeHtml(tr.title)}', '${escapeHtml(tr.artist || 'Unknown Artist')}')"
+                            class="w-8 h-8 rounded-full flex items-center justify-center text-primary hover:bg-surface-container transition active:scale-95" title="Preview Audio">
+                            <span class="material-symbols-outlined text-[22px]">play_circle</span>
+                        </button>
+                        <button onclick="deleteTrack('${escapeHtml(tr.path)}', '${escapeHtml(tr.title)}')"
+                            class="w-8 h-8 rounded-full flex items-center justify-center text-outline hover:text-error hover:bg-surface-container transition active:scale-95" title="Delete Song">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    </div>
                 </div>
             `).join('');
+            updateBatchCount();
         }
 
-        function escapePathId(p) {
-            return encodeURIComponent(p).replace(/[^a-zA-Z0-9]/g, '_');
-        }
-
-        // Library Multi-Select Helpers
-        function toggleSelectAllLibrary(checked) {
-            document.querySelectorAll('.lib-song-check').forEach(cb => cb.checked = checked);
-            updateLibrarySelectionCount();
-        }
-
-        function updateLibrarySelectionCount() {
-            const checks = document.querySelectorAll('.lib-song-check:checked');
-            const total = document.querySelectorAll('.lib-song-check').length;
-            const count = checks.length;
-
-            const bulkActions = document.getElementById('libBulkActions');
-            const badge = document.getElementById('libSelectedCountBadge');
-            const selectAllCheck = document.getElementById('libSelectAllCheck');
-
-            if (count > 0) {
-                bulkActions.classList.remove('hidden');
-                badge.innerText = `${count} of ${total} selected`;
+        function toggleSelectAllMode() {
+            isSelectionMode = !isSelectionMode;
+            const bar = document.getElementById('batchActionBar');
+            const btnText = document.getElementById('selectionModeText');
+            if (isSelectionMode) {
+                bar.classList.remove('hidden');
+                btnText.innerText = 'Cancel';
             } else {
-                bulkActions.classList.add('hidden');
+                bar.classList.add('hidden');
+                btnText.innerText = 'Select';
+                document.querySelectorAll('.lib-select-check').forEach(cb => cb.checked = false);
             }
+            document.querySelectorAll('.lib-select-check').forEach(cb => {
+                if (isSelectionMode) cb.classList.remove('hidden');
+                else cb.classList.add('hidden');
+            });
+            updateBatchCount();
+        }
 
-            if (selectAllCheck) {
-                selectAllCheck.checked = (total > 0 && count === total);
+        function toggleSelectAll(checked) {
+            document.querySelectorAll('.lib-select-check').forEach(cb => cb.checked = checked);
+            updateBatchCount();
+        }
+
+        function updateBatchCount() {
+            const selected = document.querySelectorAll('.lib-select-check:checked');
+            const count = selected.length;
+            const countText = document.getElementById('selectedCountText');
+            const deleteBtn = document.getElementById('batchDeleteBtn');
+            if (countText) countText.innerText = `${count} selected`;
+            if (deleteBtn) deleteBtn.disabled = (count === 0);
+        }
+
+        async function deleteTrack(path, title) {
+            if (!confirm(`Delete "${title}" from server?`)) return;
+            try {
+                const formData = new FormData();
+                formData.append('track_path', path);
+                const res = await fetch('/api/library/delete', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.status === 'deleted') {
+                    showToast(`Deleted: ${title}`);
+                    fetchLibrary();
+                } else {
+                    showToast(data.error || "Failed to delete", true);
+                }
+            } catch (e) {
+                showToast("Delete failed", true);
             }
         }
 
-        async function deleteSelectedLibrarySongs() {
-            const checks = Array.from(document.querySelectorAll('.lib-song-check:checked'));
+        async function deleteSelectedBatch() {
+            const checks = Array.from(document.querySelectorAll('.lib-select-check:checked'));
             if (checks.length === 0) return;
+            if (!confirm(`Delete ${checks.length} selected tracks from the server library?`)) return;
 
-            const paths = checks.map(cb => cb.getAttribute('data-song-path'));
-            if (!confirm(`Permanently delete ${paths.length} selected song(s) from your server?`)) return;
-
-            const btn = document.getElementById('libDeleteBtn');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Deleting...</span>`;
-            }
-
+            const paths = checks.map(cb => cb.getAttribute('data-path'));
             try {
                 const res = await fetch('/api/library/delete_batch', {
                     method: 'POST',
@@ -1921,213 +2135,15 @@ HTML_TEMPLATE = """
                     body: JSON.stringify({ paths: paths })
                 });
                 const data = await res.json();
-
-                if (data.status === 'ok') {
-                    showToast(`Deleted ${data.deleted_count} tracks from library!`);
-                    allLibrarySongs = allLibrarySongs.filter(s => !paths.includes(s.path));
-                    fetchLibrary();
-                } else {
-                    showToast(data.error || "Failed to delete selected tracks", true);
-                }
-            } catch (err) {
-                showToast("Error deleting selected tracks", true);
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = `<i class="fa-solid fa-trash-can"></i><span>Delete Selected</span>`;
-                }
+                showToast(`Deleted ${data.deleted_count} tracks!`);
+                toggleSelectAllMode();
+                fetchLibrary();
+            } catch (e) {
+                showToast("Batch delete failed", true);
             }
         }
 
-        async function deleteSong(path, title) {
-            if (!confirm(`Delete "${title}" permanently from your server?`)) return;
-            
-            try {
-                const formData = new FormData();
-                formData.append('path', path);
-                const res = await fetch('/api/library/delete', { method: 'POST', body: formData });
-                const data = await res.json();
-                
-                if (data.status === 'ok') {
-                    showToast(`Deleted: ${title}`);
-                    const el = document.getElementById(`lib-song-${escapePathId(path)}`);
-                    if (el) el.remove();
-                    allLibrarySongs = allLibrarySongs.filter(s => s.path !== path);
-                    const summary = document.getElementById('libSummaryText');
-                    if (summary) summary.innerText = `${allLibrarySongs.length} tracks`;
-                    updateLibrarySelectionCount();
-                } else {
-                    showToast(data.error || "Failed to delete song", true);
-                }
-            } catch (err) {
-                showToast("Error deleting song", true);
-            }
-        }
-
-        // ================= IN-BROWSER AUDIO PREVIEW =================
-        function playSongPreview(relPath, title, artist) {
-            const player = document.getElementById('globalAudioPlayer');
-            const dock = document.getElementById('floatingDock');
-            const bar = document.getElementById('audioPreviewBar');
-            const titleEl = document.getElementById('previewSongTitle');
-            const artistEl = document.getElementById('previewSongArtist');
-            const icon = document.getElementById('previewPlayIcon');
-
-            player.src = `/api/library/stream?path=${encodeURIComponent(relPath)}`;
-            player.play().catch(() => {});
-
-            titleEl.innerText = title;
-            artistEl.innerText = artist;
-            icon.className = "fa-solid fa-pause";
-
-            dock.classList.remove('hidden');
-            bar.classList.remove('hidden');
-        }
-
-        function toggleAudioPreview() {
-            const player = document.getElementById('globalAudioPlayer');
-            const icon = document.getElementById('previewPlayIcon');
-            if (player.paused) {
-                player.play();
-                icon.className = "fa-solid fa-pause";
-            } else {
-                player.pause();
-                icon.className = "fa-solid fa-play";
-            }
-        }
-
-        function onAudioEnded() {
-            const icon = document.getElementById('previewPlayIcon');
-            if (icon) icon.className = "fa-solid fa-play";
-        }
-
-        function closeAudioPreview() {
-            const player = document.getElementById('globalAudioPlayer');
-            player.pause();
-            player.src = "";
-            document.getElementById('audioPreviewBar').classList.add('hidden');
-            checkDockVisibility();
-        }
-
-        // ================= FLOATING DOCK & LIVE STATUS =================
-        function updateDownloadDock(dl) {
-            const dock = document.getElementById('floatingDock');
-            const bar = document.getElementById('activeDownloadBar');
-            const eqWrap = document.getElementById('dockEqContainer');
-            const title = document.getElementById('dockTrackTitle');
-            const speed = document.getElementById('dockSpeedText');
-            const status = document.getElementById('dockStatusText');
-            const progress = document.getElementById('dockProgressBar');
-            const actionBtnWrap = document.getElementById('dockActionBtnWrap');
-
-            const isDone = dl.status === 'completed' || dl.percent >= 100;
-            const isFailed = dl.status === 'failed';
-
-            if (isFailed) {
-                bar.className = "glass-panel p-2.5 rounded-2xl shadow-2xl border border-rose-500/80 bg-rose-950/70 flex items-center justify-between gap-2.5";
-                eqWrap.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-400 text-sm"></i>';
-                title.innerText = dl.title ? `Failed: ${dl.title}` : "Download Error";
-                speed.innerText = "Error";
-                speed.className = "text-rose-400 font-bold font-mono text-3xs";
-                status.innerText = dl.error || dl.message || "Download failed. Please check Auth tab.";
-                status.className = "text-rose-200 text-3xs truncate";
-                progress.style.width = "100%";
-                progress.className = "bg-rose-500 h-full rounded-full";
-                actionBtnWrap.innerHTML = `
-                    <button onclick="switchTab('cookies')" class="touch-action-btn px-2 py-1 bg-amber-600 text-white rounded-lg text-3xs font-semibold">Auth</button>
-                    <button onclick="hideDownloadDock()" class="touch-action-btn p-1 text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
-                `;
-            } else if (isDone) {
-                bar.className = "glass-panel p-2.5 rounded-2xl shadow-2xl border border-emerald-500/60 bg-slate-900/95 flex items-center justify-between gap-2.5";
-                eqWrap.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>';
-                title.innerText = dl.title || "Track Downloaded";
-                speed.innerText = "✓ 100%";
-                speed.className = "text-emerald-400 font-bold font-mono text-3xs";
-                status.innerText = "Saved to library!";
-                status.className = "text-emerald-300 text-3xs truncate";
-                progress.style.width = "100%";
-                progress.className = "bg-emerald-500 h-full rounded-full";
-                actionBtnWrap.innerHTML = `
-                    <button onclick="hideDownloadDock()" class="touch-action-btn p-1 text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
-                `;
-            } else {
-                bar.className = "glass-panel p-2.5 rounded-2xl shadow-2xl border border-rose-500/30 flex items-center justify-between gap-2.5";
-                eqWrap.innerHTML = `
-                    <div class="flex items-end space-x-0.5 h-3.5">
-                        <span class="w-1 bg-rose-500 rounded-full eq-bar-1"></span>
-                        <span class="w-1 bg-pink-500 rounded-full eq-bar-2"></span>
-                        <span class="w-1 bg-indigo-500 rounded-full eq-bar-3"></span>
-                        <span class="w-1 bg-rose-400 rounded-full eq-bar-4"></span>
-                    </div>
-                `;
-                title.innerText = dl.queue_text ? `[${dl.queue_text}] ${dl.title}` : (dl.title || "Downloading track...");
-                speed.innerText = `${Math.round(dl.percent)}%`;
-                speed.className = "text-rose-400 font-mono text-3xs";
-                status.innerText = dl.speed || dl.status || 'Downloading...';
-                status.className = "text-slate-400 text-3xs truncate";
-                progress.style.width = `${Math.max(5, dl.percent)}%`;
-                progress.className = "bg-gradient-to-r from-rose-500 to-indigo-500 h-full rounded-full transition-all duration-300";
-                actionBtnWrap.innerHTML = `
-                    <button onclick="stopDownload()" class="touch-action-btn p-2 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-xl text-xs" title="Stop Download">
-                        <i class="fa-solid fa-stop"></i>
-                    </button>
-                `;
-            }
-
-            dock.classList.remove('hidden');
-            bar.classList.remove('hidden');
-
-            if (dl.id) {
-                if (isDone) {
-                    markCardAsCompleted(dl.id);
-                } else if (isFailed) {
-                    markCardAsFailed(dl.id, dl.error);
-                } else {
-                    const cardPct = document.getElementById(`card-pct-${dl.id}`);
-                    const cardBar = document.getElementById(`card-bar-${dl.id}`);
-                    if (cardPct) cardPct.innerText = `${Math.round(dl.percent)}%`;
-                    if (cardBar) cardBar.style.width = `${Math.max(5, dl.percent)}%`;
-                }
-            }
-        }
-
-        function hideDownloadDock() {
-            document.getElementById('activeDownloadBar').classList.add('hidden');
-            checkDockVisibility();
-        }
-
-        function checkDockVisibility() {
-            const dlBar = document.getElementById('activeDownloadBar');
-            const audioBar = document.getElementById('audioPreviewBar');
-            const dock = document.getElementById('floatingDock');
-            if (dlBar.classList.contains('hidden') && audioBar.classList.contains('hidden')) {
-                dock.classList.add('hidden');
-            }
-        }
-
-        function updateStatusBadge(syncing) {
-            const badge = document.getElementById('headerSyncBadge');
-            const stopBtn = document.getElementById('headerStopBtn');
-            const logsStopBtn = document.getElementById('logsStopBtn');
-
-            if (syncing) {
-                if (badge) {
-                    badge.className = "px-2 py-0.5 text-3xs rounded-full font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse";
-                    badge.innerText = "⚡ Syncing";
-                }
-                if (stopBtn) stopBtn.classList.remove('hidden');
-                if (logsStopBtn) logsStopBtn.classList.remove('hidden');
-            } else {
-                if (badge) {
-                    badge.className = "px-2 py-0.5 text-3xs rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-                    badge.innerText = "● Ready";
-                }
-                if (stopBtn) stopBtn.classList.add('hidden');
-                if (logsStopBtn) logsStopBtn.classList.add('hidden');
-            }
-        }
-
-        // Fetch Logs
+        // ================= CONSOLE & TELEMETRY =================
         async function fetchLogs() {
             try {
                 const res = await fetch('/api/logs');
@@ -2137,64 +2153,129 @@ HTML_TEMPLATE = """
             } catch (e) {}
         }
 
-        // Periodic Background Status Poller
+        async function stopDownload() {
+            try {
+                await fetch('/api/stop', { method: 'POST' });
+                showToast("Download cancelled", true);
+                hideDownloadDock();
+            } catch (e) {
+                showToast("Failed to stop download", true);
+            }
+        }
+
+        function updateStatusBadge(isSyncing) {
+            const pulseDot = document.getElementById('headerPulseDot');
+            const statusText = document.getElementById('headerStatusText');
+            const logsStopBtn = document.getElementById('logsStopBtn');
+
+            if (isSyncing) {
+                if (pulseDot) pulseDot.className = "w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping";
+                if (statusText) {
+                    statusText.className = "text-[10px] font-bold text-amber-600 tracking-wider uppercase";
+                    statusText.innerText = "Syncing Pipeline";
+                }
+                if (logsStopBtn) logsStopBtn.classList.remove('hidden');
+            } else {
+                if (pulseDot) pulseDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse";
+                if (statusText) {
+                    statusText.className = "text-[10px] font-bold text-outline tracking-wider uppercase";
+                    statusText.innerText = "Navidrome Online";
+                }
+                if (logsStopBtn) logsStopBtn.classList.add('hidden');
+            }
+        }
+
+        // Floating Miniplayer / Download Dock Controls
+        function updateDownloadDock(dl) {
+            const dock = document.getElementById('floatingDock');
+            const title = document.getElementById('dockTitle');
+            const speed = document.getElementById('dockSpeed');
+            const progress = document.getElementById('dockProgressBar');
+            const actionWrap = document.getElementById('dockActionWrap');
+            const eqWrap = document.getElementById('dockEqWrap');
+
+            const isDone = dl.status === 'completed';
+            const isFailed = dl.status === 'failed';
+            const isCancelled = dl.status === 'cancelled';
+
+            dock.classList.remove('opacity-0', 'translate-y-32', 'pointer-events-none');
+            dock.classList.add('opacity-100', 'translate-y-0');
+
+            if (isFailed) {
+                title.innerText = dl.error ? `Failed: ${dl.error}` : "Download Failed";
+                speed.innerText = "Error";
+                speed.className = "text-[10px] font-mono font-bold text-error shrink-0";
+                progress.style.width = "100%";
+                progress.className = "bg-error h-full rounded-full";
+                actionWrap.innerHTML = `
+                    <button onclick="switchTab('cookies')" class="px-2.5 py-1 bg-amber-500 text-white rounded-full text-[10px] font-bold">Auth</button>
+                    <button onclick="hideDownloadDock()" class="w-6 h-6 rounded-full flex items-center justify-center text-outline"><span class="material-symbols-outlined text-[16px]">close</span></button>
+                `;
+            } else if (isDone) {
+                eqWrap.innerHTML = '<span class="material-symbols-outlined text-emerald-600 text-[20px] icon-fill">check_circle</span>';
+                title.innerText = dl.title || "Track Downloaded";
+                speed.innerText = "✓ 100%";
+                speed.className = "text-[10px] font-mono font-bold text-emerald-600 shrink-0";
+                progress.style.width = "100%";
+                progress.className = "bg-emerald-500 h-full rounded-full";
+                actionWrap.innerHTML = `
+                    <button onclick="hideDownloadDock()" class="w-6 h-6 rounded-full flex items-center justify-center text-outline"><span class="material-symbols-outlined text-[16px]">close</span></button>
+                `;
+            } else {
+                title.innerText = dl.title || "Downloading audio...";
+                const pct = Math.round(dl.percent || 0);
+                speed.innerText = `${pct}% · ${dl.speed || ''}`;
+                speed.className = "text-[10px] font-mono font-bold text-primary shrink-0";
+                progress.style.width = `${Math.max(5, pct)}%`;
+                progress.className = "bg-gradient-to-r from-primary to-secondary h-full rounded-full";
+                actionWrap.innerHTML = `
+                    <button onclick="stopDownload()" class="w-7 h-7 rounded-full bg-surface-container hover:bg-error/10 hover:text-error text-on-surface-variant flex items-center justify-center transition" title="Cancel">
+                        <span class="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                `;
+            }
+        }
+
+        function hideDownloadDock() {
+            const dock = document.getElementById('floatingDock');
+            dock.classList.add('opacity-0', 'translate-y-32', 'pointer-events-none');
+            dock.classList.remove('opacity-100', 'translate-y-0');
+        }
+
+        // Periodic Background Status Poller (every 1.8s)
         setInterval(() => {
             const autoLogs = document.getElementById('autoRefreshLogs');
-            const logsTabVisible = !document.getElementById('tab-logs').classList.contains('hidden');
-            if (logsTabVisible && autoLogs && autoLogs.checked) {
+            const logsTab = document.getElementById('tab-logs');
+            if (autoLogs && autoLogs.checked && logsTab && !logsTab.classList.contains('hidden')) {
                 fetchLogs();
             }
 
             fetch('/api/status').then(r => r.json()).then(d => {
                 updateStatusBadge(d.is_syncing);
-                
-                // 1. Process all completed IDs
-                if (d.completed_ids && Array.isArray(d.completed_ids)) {
+
+                if (d.completed_ids) {
                     d.completed_ids.forEach(id => {
-                        downloadedIds.add(id);
                         markCardAsCompleted(id);
-                        
-                        const plStatus = document.getElementById(`pl-track-status-${id}`);
-                        if (plStatus) {
-                            plStatus.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check"></i> Done</span>`;
-                        }
                     });
                 }
 
-                // 2. Process playlist queue
-                if (d.playlist_queue && d.playlist_queue.is_active) {
-                    const pq = d.playlist_queue;
-                    if (pq.current_id) {
-                        const plCurStatus = document.getElementById(`pl-track-status-${pq.current_id}`);
-                        if (plCurStatus) {
-                            plCurStatus.innerHTML = `<span class="text-rose-400 font-mono font-bold animate-pulse">${Math.round(d.current_download.percent || 0)}%</span>`;
-                        }
-                    }
-                }
+                const dl = d.current_download || d.current;
+                if (dl && (dl.status !== 'idle' || d.is_syncing)) {
+                    const isDone = dl.status === 'completed' || dl.percent >= 100;
+                    const isFailed = dl.status === 'failed';
 
-                // 3. Process active or completed or failed download
-                if (d.current_download && d.current_download.status !== 'idle') {
-                    const dl = d.current_download;
-                    
-                    if (dl.status === 'completed' || dl.percent >= 100) {
+                    if (isDone) {
                         if (dl.id) markCardAsCompleted(dl.id);
                         updateDownloadDock(dl);
-                        
-                        // Single completion notification
                         if (lastNotifiedId !== dl.id || lastNotifiedStatus !== 'completed') {
                             lastNotifiedId = dl.id;
                             lastNotifiedStatus = 'completed';
-                            showToast(`🎉 "${dl.title}" downloaded and saved!`);
+                            showToast(`✓ Download completed: ${dl.title}`);
+                            fetchLibrary();
                         }
-
-                        setTimeout(() => {
-                            if (!d.is_syncing && dl.status === 'completed') hideDownloadDock();
-                        }, 4000);
-                    } else if (dl.status === 'failed') {
+                    } else if (isFailed) {
                         if (dl.id) markCardAsFailed(dl.id, dl.error);
                         updateDownloadDock(dl);
-
-                        // Single failure notification
                         if (lastNotifiedId !== dl.id || lastNotifiedStatus !== 'failed') {
                             lastNotifiedId = dl.id;
                             lastNotifiedStatus = 'failed';
@@ -2205,8 +2286,7 @@ HTML_TEMPLATE = """
                         updateDownloadDock(dl);
                     }
                 } else {
-                    if (activeDownloadingId && !d.is_syncing) {
-                        markCardAsCompleted(activeDownloadingId);
+                    if (activeDownloadingId && !d.is_syncing && !activeAudio) {
                         hideDownloadDock();
                         activeDownloadingId = null;
                     }
@@ -2371,6 +2451,25 @@ def api_library_delete_batch():
                 
     return jsonify({"status": "ok", "deleted_count": deleted_count})
 
+
+@app.route("/api/library/rescan", methods=["POST"])
+def api_library_rescan():
+    nav_bin = "/opt/navidrome/navidrome"
+    nav_cfg = "/var/lib/navidrome/navidrome.toml"
+    try:
+        if os.path.isfile(nav_bin) and os.path.isfile(nav_cfg):
+            cmd = ["sudo", nav_bin, "scan", "--configfile", nav_cfg]
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+            if res.returncode == 0:
+                return jsonify({"status": "ok", "message": "Navidrome library scan completed successfully"})
+            else:
+                err_msg = res.stderr.strip() or res.stdout.strip()
+                return jsonify({"status": "error", "message": f"Scan failed: {err_msg}"}), 500
+        else:
+            return jsonify({"status": "ok", "message": "Rescan simulated (Navidrome not on this host)"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/api/library/stream")
 def api_library_stream():
     rel_path = request.args.get("path", "")
@@ -2395,6 +2494,7 @@ def api_status():
         pq_copy = dict(playlist_queue)
     return jsonify({
         "is_syncing": is_syncing,
+        "current": dl_copy,
         "current_download": dl_copy,
         "playlist_queue": pq_copy,
         "completed_ids": list(completed_download_ids),

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#fbf8ff;color:#1a1b22;}body{overscroll-behavior:none;font-family:'Plus Jakarta Sans',sans-serif;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "surface-bright": "#fbf8ff", "inverse-on-surface": "#f1effa", "on-primary-fixed-variant": "#92001f", "on-error": "#ffffff", "on-surface-variant": "#5d3f3f", "on-primary-container": "#fffbff", "on-error-container": "#93000a", "tertiary-container": "#c54963", "on-background": "#1a1b22", "secondary-fixed": "#f1dbff", "error-container": "#ffdad6", "surface-container-lowest": "#ffffff", "primary-fixed-dim": "#ffb3b2", "secondary": "#8234c6", "surface-container": "#eeedf7", "surface-dim": "#dad9e3", "primary-fixed": "#ffdad9", "surface-container-highest": "#e3e1ec", "tertiary": "#a5304c", "primary-container": "#e5183b", "tertiary-fixed-dim": "#ffb2bc", "on-tertiary-fixed": "#400013", "surface": "#fbf8ff", "on-primary-fixed": "#410008", "on-primary": "#ffffff", "on-secondary-fixed-variant": "#680eac", "on-secondary": "#ffffff", "primary": "#ba002b", "on-tertiary": "#ffffff", "on-secondary-fixed": "#2d0050", "surface-variant": "#e3e1ec", "on-tertiary-container": "#fffbff", "tertiary-fixed": "#ffd9dd", "background": "#fbf8ff", "secondary-container": "#b86dfd", "on-secondary-container": "#410070", "inverse-surface": "#2f3038", "outline-variant": "#e6bdbc", "secondary-fixed-dim": "#deb7ff", "surface-tint": "#bf002c", "on-surface": "#1a1b22", "outline": "#916e6e", "surface-container-low": "#f4f2fd", "inverse-primary": "#ffb3b2", "error": "#ba1a1a", "on-tertiary-fixed-variant": "#881938", "surface-container-high": "#e8e7f1" }, borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, spacing: { "space-xl": "2.25rem", "gutter-desktop": "1.75rem", "space-sm": "0.5rem", "space-xs": "0.25rem", "gutter": "1.25rem", "space-lg": "1.5rem", "margin": "1.25rem", "space-md": "1rem", "margin-desktop": "2.5rem" }, fontFamily: { "display-mobile": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "display": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "headline-lg-mobile": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"] }, fontSize: { "display-mobile": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.025em", "fontWeight": "800" }], "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" }], "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }], "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "800" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "headline-lg-mobile": ["26px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "400" }], "headline-md": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }] } } } };</script></head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-gutter flex items-center justify-between"><div class="flex items-center gap-space-sm"><div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center"><span class="material-symbols-outlined text-primary text-[22px]">graphic_eq</span></div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary leading-none tracking-tight">TubeSync</span><div class="flex items-center gap-1.5 mt-0.5"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span><span class="font-label-sm text-label-sm text-outline tracking-wider uppercase font-semibold">Navidrome Online</span></div></div></div><div class="flex items-center gap-space-xs"><button class="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-95 transition-transform"><span class="material-symbols-outlined text-[22px]">airplay</span></button><button class="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-95 transition-transform"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></button></div></div></header><main class="flex flex-col relative w-full px-margin pt-16 pb-28 bg-surface min-h-screen"><div class="flex flex-col w-full gap-space-lg">
+<!-- Header Title Section -->
+<section class="flex flex-col gap-space-xs pt-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-primary font-bold">TubeSync Audio Engine</span>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant text-[11px] font-semibold">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>Subsonic v1.16.1</span>
+</div>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface tracking-tight">Library</h1>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1.5">
+<span>Navidrome Local &amp; Cloud Vault</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="font-semibold text-on-surface">142 tracks (1.18 GB)</span>
+</p>
+</section>
+<!-- Storage & Health Metric Card -->
+<section class="relative overflow-hidden rounded-lg bg-surface-container-lowest p-space-md shadow-sm">
+<div class="absolute -right-10 -bottom-10 w-36 h-36 rounded-full bg-secondary-fixed/30 blur-2xl pointer-events-none"></div>
+<div class="flex flex-col gap-space-sm relative z-10">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-secondary-fixed flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[16px]">pie_chart</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface font-semibold">Server Storage Pool</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">1.18 GB used of 250 GB</span>
+</div>
+<!-- Progress Bar with subtle violet/magenta gradient -->
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden p-[1px]">
+<div class="h-full rounded-full bg-gradient-to-r from-secondary via-secondary-container to-primary transition-all duration-700 ease-out" style="width: 14.8%;"></div>
+</div>
+<div class="flex items-center justify-between pt-0.5 font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary">cloud_done</span>
+          Zero Packet Loss
+        </span>
+<button class="text-primary hover:text-on-primary-fixed-variant transition-colors font-semibold flex items-center gap-0.5 active:scale-95" id="rescan-quick-btn">
+<span class="material-symbols-outlined text-[14px]">autorenew</span>
+          Rescan Index
+        </button>
+</div>
+</div>
+</section>
+<!-- Segmented Control Pills -->
+<section class="overflow-x-auto -mx-margin px-margin no-scrollbar">
+<div class="flex items-center gap-space-xs min-w-max pb-1" id="filter-pills">
+<button class="filter-tab px-4 py-2 rounded-full font-label-md text-label-md transition-all duration-200 bg-primary text-on-primary shadow-sm" data-category="all">
+        All Tracks (142)
+      </button>
+<button class="filter-tab px-4 py-2 rounded-full font-label-md text-label-md transition-all duration-200 bg-surface-container-high text-on-surface-variant hover:text-on-surface" data-category="flac">
+        FLAC Lossless (38)
+      </button>
+<button class="filter-tab px-4 py-2 rounded-full font-label-md text-label-md transition-all duration-200 bg-surface-container-high text-on-surface-variant hover:text-on-surface" data-category="compressed">
+        Opus / MP3 (84)
+      </button>
+<button class="filter-tab px-4 py-2 rounded-full font-label-md text-label-md transition-all duration-200 bg-surface-container-high text-on-surface-variant hover:text-on-surface" data-category="playlists">
+        Playlists (6)
+      </button>
+</div>
+</section>
+<!-- Search & Sort Row -->
+<section class="flex items-center gap-space-xs">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+<input class="w-full h-11 pl-10 pr-4 rounded-full bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-md text-body-md shadow-sm focus:outline-none focus:bg-surface-bright transition-all" id="track-search-input" placeholder="Search title, artist, or tags..." type="text"/>
+</div>
+<div class="relative">
+<button class="h-11 px-3.5 rounded-full bg-surface-container-lowest text-on-surface flex items-center gap-1 shadow-sm font-label-md text-label-md active:scale-95 transition-transform" id="sort-menu-btn">
+<span class="material-symbols-outlined text-[16px] text-primary">swap_vert</span>
+<span class="hidden sm:inline">Sort:</span>
+<span class="font-semibold" id="current-sort-label">Recent</span>
+<span class="material-symbols-outlined text-[14px]">expand_more</span>
+</button>
+</div>
+</section>
+<!-- Track List Stream -->
+<section class="flex flex-col gap-1.5" id="track-list">
+<!-- Item 1: Podi Walan Kade Hatti Mutti -->
+<article class="track-row group relative flex items-center justify-between p-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-150 shadow-sm active:scale-[0.99]" data-type="flac">
+<div class="flex items-center gap-space-sm min-w-0 flex-1 pr-2">
+<div class="relative w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Traditional terracotta pottery and artisan ceramics with ambient golden hour sunlight in an authentic tropical Sri Lankan village market studio, vibrant warm studio lighting, 8k commercial photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCn2hEOBnZAAqPeVlClhMeuR_U0f8JEYsnCsP0b54H_T8g3IT30TvZRVSW5aYecHU4Nop2vLB8GCTRGwxwXqcldfblSyRubbvL7-nImKRCxYiA-IRzhBb2tftsu4GeSA5Bc46OCmp-paJlZE1MoqvtEonR-MTM87PejEvF-qD8pxKaZlec3Aj5nXdE5bRjCdCHg-o67ehs-FlZPdk2ToQii4VICJCrPoY7IsKAlDSrkmUuDty8R2bCw"/>
+<button class="absolute inset-0 bg-on-surface/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-[20px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<h2 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Podi Walan Kade Hatti Mutti</h2>
+<span class="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-label-sm text-[10px] font-bold tracking-tight">FLAC</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant truncate">Gypsies · Baila Classics Vault</p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs flex-shrink-0">
+<span class="font-label-sm text-label-sm text-outline tabular-nums">4:12</span>
+<button aria-label="Play track" class="w-9 h-9 rounded-full flex items-center justify-center text-primary bg-primary/5 hover:bg-primary hover:text-on-primary transition-colors active:scale-90">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button aria-label="More options" class="track-menu-trigger w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</article>
+<!-- Item 2: Neththara - Bathiya & Santhush -->
+<article class="track-row group relative flex items-center justify-between p-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-150 shadow-sm active:scale-[0.99]" data-type="compressed">
+<div class="flex items-center gap-space-sm min-w-0 flex-1 pr-2">
+<div class="relative w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="High energy modern pop concert stage illuminated with laser red and violet neon rays, stage mist, dynamic silhouettes of vocalists, vivid album cover style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzT1fpeW472m9umS4ftEmG74atxS1jx9I5-YMsVFniWpxuRqk3v3NxDdjoHlPsLv8R6eB6TkP8X55zRwQPdlFcJMiJWYpl12o-tJ7R5kFf0fP6UVpUGWjnI1cZCieW1MZczMm83GQ_1wZxW_nEQQOzK9tjvdUHs-HVd3OoVRKtkr1Ts8SfTDp4wYIitro7ygsNWnrB3qxNjszv7nGbceKb--nJAIAd19bO-Reu5Efn1PnbqoEPWW7l"/>
+<button class="absolute inset-0 bg-on-surface/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-[20px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<h2 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Neththara</h2>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-[10px] font-bold tracking-tight">320k MP3</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant truncate">Bathiya &amp; Santhush · Tharunye</p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs flex-shrink-0">
+<span class="font-label-sm text-label-sm text-outline tabular-nums">3:56</span>
+<button aria-label="Play track" class="w-9 h-9 rounded-full flex items-center justify-center text-primary bg-primary/5 hover:bg-primary hover:text-on-primary transition-colors active:scale-90">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button aria-label="More options" class="track-menu-trigger w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</article>
+<!-- Item 3: Sudu Gavme Ai - Lahiru Perera -->
+<article class="track-row group relative flex items-center justify-between p-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-150 shadow-sm active:scale-[0.99]" data-type="flac">
+<div class="flex items-center gap-space-sm min-w-0 flex-1 pr-2">
+<div class="relative w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Playful pop art collage featuring tropical floral aesthetics, retro electric acoustic guitar, bright cherry pastel colors, modern Apple editorial album art." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDg9q-Xg73STe829lsDuaOYYPcFD6xmUNBGAZGNfqE7NtZ_9PvSeT1vYVpp-xd9muwtXtEmgX582J5xK6pQ6Iet58jT6IJSYJ47MPHVUU8qAEsCRK5E-1m6ydYDg5__aUB8McL9km-mdTC1GU1nGMJp3rSOC8x5-ky3pcPR1Q4kFFzH1drkkbkQitNV6RKWj15KbKx0B77Bp6Y4qUKC7HwEL_NUeL0k39w8ap03Kd5KvqeQicXi_edx"/>
+<button class="absolute inset-0 bg-on-surface/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-[20px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<h2 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Sudu Gavme Ai</h2>
+<span class="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-label-sm text-[10px] font-bold tracking-tight">FLAC</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant truncate">Lahiru Perera · Rambari Remasters</p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs flex-shrink-0">
+<span class="font-label-sm text-label-sm text-outline tabular-nums">4:05</span>
+<button aria-label="Play track" class="w-9 h-9 rounded-full flex items-center justify-center text-primary bg-primary/5 hover:bg-primary hover:text-on-primary transition-colors active:scale-90">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button aria-label="More options" class="track-menu-trigger w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</article>
+<!-- Item 4: Chand Sifarish - Fanaa -->
+<article class="track-row group relative flex items-center justify-between p-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-150 shadow-sm active:scale-[0.99]" data-type="flac">
+<div class="flex items-center gap-space-sm min-w-0 flex-1 pr-2">
+<div class="relative w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Snow covered pine trees in Polish mountains under a gentle moonlight glow, romantic moody cinematic lighting, deep navy and silver mist, high-resolution aesthetic movie soundtrack still." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDstZilslsbqYMW9gWyE2WHZ10eksC0hBsm9Da7nfKHPIJKN2J3WQhd5Ybmtzlt610yhkRSprk-p5KI8S9gwDoizsUiAXoowwCIlePsOvImgSZRl9ElnwNmWK8bXsqCbkVGYItGvKwKzCxtFkVhsfCgLq2q6zTzCYLzz63zSW7FwZagXGkYTyk2t16tZOdqOrvQGrmtwH8_IZHZBYM3n8BSUzyK6hZe_kTTQ8hHq0ifCxip10-3do42"/>
+<button class="absolute inset-0 bg-on-surface/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-[20px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<h2 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Chand Sifarish</h2>
+<span class="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-label-sm text-[10px] font-bold tracking-tight">FLAC</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant truncate">Shaan, Kailash Kher · Fanaa (Original Motion Picture)</p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs flex-shrink-0">
+<span class="font-label-sm text-label-sm text-outline tabular-nums">4:37</span>
+<button aria-label="Play track" class="w-9 h-9 rounded-full flex items-center justify-center text-primary bg-primary/5 hover:bg-primary hover:text-on-primary transition-colors active:scale-90">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button aria-label="More options" class="track-menu-trigger w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</article>
+<!-- Item 5: Romance like SRK Mashup -->
+<article class="track-row group relative flex items-center justify-between p-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-150 shadow-sm active:scale-[0.99]" data-type="compressed">
+<div class="flex items-center gap-space-sm min-w-0 flex-1 pr-2">
+<div class="relative w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Warm golden hour sunset over endless mustard fields in Punjab, cinematic nostalgic film grain, warm amber and carmine crimson lighting, romantic iconic Indian cinema artwork." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4hWzWkamfhQk2Tdk_Hl0EmxiPshgetSBT6yHxXw9xjsGeqOKSM1wMFTh1nKLFirI67blG5vLUoEA_dtm-hiGaaSLtJjXunPQDHyirJThe8-EerkYt2MjsuITtUlpmHXZtWaadVZF5VG9KS4aSHjJDZMt5ywk6kNdMqCos6LPNPuoB_c0bjZx4BkJe_fhgO39OR1NBflU0DeWwcgoWLcE-6G9CaIYe8tbO0Bb1d-dZxfMy_XzKjusy"/>
+<button class="absolute inset-0 bg-on-surface/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-[20px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<h2 class="font-headline-sm text-headline-sm text-on-surface truncate font-semibold">Romance like SRK Mashup</h2>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-[10px] font-bold tracking-tight">OPUS</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant truncate">DJ Chetas, Various Artists · Bollywood Club Edits</p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs flex-shrink-0">
+<span class="font-label-sm text-label-sm text-outline tabular-nums">5:18</span>
+<button aria-label="Play track" class="w-9 h-9 rounded-full flex items-center justify-center text-primary bg-primary/5 hover:bg-primary hover:text-on-primary transition-colors active:scale-90">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button aria-label="More options" class="track-menu-trigger w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</article>
+</section>
+<!-- iOS-inspired Context Action Sheet (Hidden by default, triggered via script) -->
+<div class="fixed inset-0 bg-on-surface/30 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-200 flex items-end sm:items-center justify-center p-4" id="ios-menu-backdrop">
+<div class="w-full max-w-sm rounded-lg bg-surface-container-lowest p-space-md shadow-2xl transform translate-y-8 transition-transform duration-200 flex flex-col gap-space-sm" id="ios-menu-sheet">
+<div class="flex items-center justify-between pb-2">
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">Track Options</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant truncate" id="menu-track-title">Selected Track</span>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant" id="close-menu-btn">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<button class="w-full h-11 px-3.5 rounded-full bg-surface-container-low text-on-surface font-label-md text-label-md flex items-center gap-3 hover:bg-surface-container transition-colors text-left">
+<span class="material-symbols-outlined text-[20px] text-primary">playlist_add</span>
+        Add to Playlist
+      </button>
+<button class="w-full h-11 px-3.5 rounded-full bg-surface-container-low text-on-surface font-label-md text-label-md flex items-center gap-3 hover:bg-surface-container transition-colors text-left">
+<span class="material-symbols-outlined text-[20px] text-secondary">download_for_offline</span>
+        Cache to Local Vault
+      </button>
+<button class="w-full h-11 px-3.5 rounded-full bg-surface-container-low text-on-surface font-label-md text-label-md flex items-center gap-3 hover:bg-surface-container transition-colors text-left">
+<span class="material-symbols-outlined text-[20px] text-outline">info</span>
+        View Subsonic Audio Metadata
+      </button>
+<button class="w-full h-11 px-3.5 rounded-full bg-error-container text-on-error-container font-label-md text-label-md flex items-center gap-3 hover:opacity-90 transition-opacity text-left">
+<span class="material-symbols-outlined text-[20px]">delete_sweep</span>
+        Unlink from Server Index
+      </button>
+</div>
+</div>
+<!-- Floating Multi-Select & Batch Rescan Tool Pill -->
+<aside class="sticky bottom-4 z-40 w-full mt-space-sm">
+<div class="mx-auto max-w-md rounded-full bg-surface-container-lowest/85 backdrop-blur-2xl p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.12)] flex items-center justify-between">
+<div class="flex items-center gap-2 pl-3">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-on-primary text-[12px] font-bold">
+<span id="selected-count">5</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface font-semibold">Indexed Tracks</span>
+</div>
+<div class="flex items-center gap-1.5">
+<button class="h-9 px-3.5 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md flex items-center gap-1.5 transition-colors active:scale-95" id="batch-sync-btn">
+<span class="material-symbols-outlined text-[16px] text-primary">sync</span>
+<span>Batch Rescan</span>
+</button>
+<button class="h-9 px-4 rounded-full bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md flex items-center gap-1 shadow-md transition-all active:scale-95" id="play-all-btn">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+<span>Play All</span>
+</button>
+</div>
+</div>
+</aside>
+</div>
+<script>
+  (function () {
+    // Filter pill tabs interactivity
+    const tabs = document.querySelectorAll('.filter-tab');
+    const trackRows = document.querySelectorAll('.track-row');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => {
+          t.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm');
+          t.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+        });
+        tab.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+        tab.classList.add('bg-primary', 'text-on-primary', 'shadow-sm');
+
+        const filter = tab.getAttribute('data-category');
+        trackRows.forEach(row => {
+          if (filter === 'all') {
+            row.style.display = 'flex';
+          } else if (filter === 'flac') {
+            row.style.display = row.getAttribute('data-type') === 'flac' ? 'flex' : 'none';
+          } else if (filter === 'compressed') {
+            row.style.display = row.getAttribute('data-type') === 'compressed' ? 'flex' : 'none';
+          } else {
+            row.style.display = 'flex';
+          }
+        });
+      });
+    });
+
+    // In-page search filter
+    const searchInput = document.getElementById('track-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        trackRows.forEach(row => {
+          const text = row.innerText.toLowerCase();
+          row.style.display = text.includes(query) ? 'flex' : 'none';
+        });
+      });
+    }
+
+    // Context Menu Simulation
+    const menuBackdrop = document.getElementById('ios-menu-backdrop');
+    const menuSheet = document.getElementById('ios-menu-sheet');
+    const closeMenuBtn = document.getElementById('close-menu-btn');
+    const menuTrackTitle = document.getElementById('menu-track-title');
+    const menuTriggers = document.querySelectorAll('.track-menu-trigger');
+
+    function openMenu(title) {
+      if (!menuBackdrop || !menuSheet) return;
+      if (menuTrackTitle) menuTrackTitle.textContent = title;
+      menuBackdrop.classList.remove('pointer-events-none', 'opacity-0');
+      menuBackdrop.classList.add('opacity-100');
+      menuSheet.classList.remove('translate-y-8');
+      menuSheet.classList.add('translate-y-0');
+    }
+
+    function closeMenu() {
+      if (!menuBackdrop || !menuSheet) return;
+      menuBackdrop.classList.add('pointer-events-none', 'opacity-0');
+      menuBackdrop.classList.remove('opacity-100');
+      menuSheet.classList.add('translate-y-8');
+      menuSheet.classList.remove('translate-y-0');
+    }
+
+    menuTriggers.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const row = btn.closest('.track-row');
+        const songTitle = row ? row.querySelector('h2').textContent : 'Track';
+        openMenu(songTitle);
+      });
+    });
+
+    if (closeMenuBtn) closeMenuBtn.addEventListener('click', closeMenu);
+    if (menuBackdrop) {
+      menuBackdrop.addEventListener('click', (e) => {
+        if (e.target === menuBackdrop) closeMenu();
+      });
+    }
+
+    // Rescan button animation feedback
+    const quickRescan = document.getElementById('rescan-quick-btn');
+    const batchSync = document.getElementById('batch-sync-btn');
+    
+    function triggerRescanFeedback(btn) {
+      if (!btn) return;
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = `<span class="material-symbols-outlined text-[14px] animate-spin">refresh</span> Rescanning...`;
+      setTimeout(() => {
+        btn.innerHTML = `<span class="material-symbols-outlined text-[14px] text-emerald-600">done</span> Synced!`;
+        setTimeout(() => {
+          btn.innerHTML = originalHTML;
+        }, 1800);
+      }, 1200);
+    }
+
+    if (quickRescan) quickRescan.addEventListener('click', () => triggerRescanFeedback(quickRescan));
+    if (batchSync) batchSync.addEventListener('click', () => triggerRescanFeedback(batchSync));
+  })();
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/80 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.04)]" data-active-classes="text-primary font-semibold"><div class="h-16 px-gutter flex items-center justify-around"><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="search" href="#"><span class="material-symbols-outlined text-[24px]">search</span><span class="font-label-sm text-label-sm">Search</span></a><a aria-current="page" class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] transition-colors text-primary font-semibold" data-path="library" href="#"><span class="material-symbols-outlined text-[24px]">library_music</span><span class="font-label-sm text-label-sm">Library</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="sources" href="#"><span class="material-symbols-outlined text-[24px]">podcasts</span><span class="font-label-sm text-label-sm">Sources</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="auth" href="#"><span class="material-symbols-outlined text-[24px]">key</span><span class="font-label-sm text-label-sm">Auth</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="console" href="#"><span class="material-symbols-outlined text-[24px]">terminal</span><span class="font-label-sm text-label-sm">Console</span></a></div></nav></body></html>

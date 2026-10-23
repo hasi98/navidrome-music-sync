@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#fbf8ff;color:#1a1b22;}body{overscroll-behavior:none;font-family:'Plus Jakarta Sans',sans-serif;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "surface-bright": "#fbf8ff", "inverse-on-surface": "#f1effa", "on-primary-fixed-variant": "#92001f", "on-error": "#ffffff", "on-surface-variant": "#5d3f3f", "on-primary-container": "#fffbff", "on-error-container": "#93000a", "tertiary-container": "#c54963", "on-background": "#1a1b22", "secondary-fixed": "#f1dbff", "error-container": "#ffdad6", "surface-container-lowest": "#ffffff", "primary-fixed-dim": "#ffb3b2", "secondary": "#8234c6", "surface-container": "#eeedf7", "surface-dim": "#dad9e3", "primary-fixed": "#ffdad9", "surface-container-highest": "#e3e1ec", "tertiary": "#a5304c", "primary-container": "#e5183b", "tertiary-fixed-dim": "#ffb2bc", "on-tertiary-fixed": "#400013", "surface": "#fbf8ff", "on-primary-fixed": "#410008", "on-primary": "#ffffff", "on-secondary-fixed-variant": "#680eac", "on-secondary": "#ffffff", "primary": "#ba002b", "on-tertiary": "#ffffff", "on-secondary-fixed": "#2d0050", "surface-variant": "#e3e1ec", "on-tertiary-container": "#fffbff", "tertiary-fixed": "#ffd9dd", "background": "#fbf8ff", "secondary-container": "#b86dfd", "on-secondary-container": "#410070", "inverse-surface": "#2f3038", "outline-variant": "#e6bdbc", "secondary-fixed-dim": "#deb7ff", "surface-tint": "#bf002c", "on-surface": "#1a1b22", "outline": "#916e6e", "surface-container-low": "#f4f2fd", "inverse-primary": "#ffb3b2", "error": "#ba1a1a", "on-tertiary-fixed-variant": "#881938", "surface-container-high": "#e8e7f1" }, borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, spacing: { "space-xl": "2.25rem", "gutter-desktop": "1.75rem", "space-sm": "0.5rem", "space-xs": "0.25rem", "gutter": "1.25rem", "space-lg": "1.5rem", "margin": "1.25rem", "space-md": "1rem", "margin-desktop": "2.5rem" }, fontFamily: { "display-mobile": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "display": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "headline-lg-mobile": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"] }, fontSize: { "display-mobile": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.025em", "fontWeight": "800" }], "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" }], "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }], "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "800" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "headline-lg-mobile": ["26px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "400" }], "headline-md": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }] } } } };</script></head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-gutter flex items-center justify-between"><div class="flex items-center gap-space-sm"><div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center"><span class="material-symbols-outlined text-primary text-[22px]">graphic_eq</span></div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary leading-none tracking-tight">TubeSync</span><div class="flex items-center gap-1.5 mt-0.5"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span><span class="font-label-sm text-label-sm text-outline tracking-wider uppercase font-semibold">Navidrome Online</span></div></div></div><div class="flex items-center gap-space-xs"><button class="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-95 transition-transform"><span class="material-symbols-outlined text-[22px]">airplay</span></button><button class="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-95 transition-transform"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></button></div></div></header><main class="flex flex-col relative w-full px-margin pt-16 pb-28 bg-surface min-h-screen"><div class="flex flex-col w-full gap-space-lg">
+<!-- Breadcrumb & Mode Tag -->
+<div class="flex items-center justify-between pt-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Telemetry &amp; Ops</span>
+<span class="text-outline/40">•</span>
+<span class="font-label-sm text-label-sm text-primary font-semibold">Subsonic Engine</span>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high shadow-sm">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold tracking-tight">Active Ingest</span>
+</div>
+</div>
+<!-- Daemon Master Status Card (Translucent Frosted Card) -->
+<div class="relative overflow-hidden rounded-2xl bg-surface-container-lowest shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-space-md">
+<!-- Atmospheric Ambient Bloom behind daemon stats -->
+<div class="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-primary/10 blur-2xl pointer-events-none"></div>
+<div class="absolute -bottom-10 -left-10 w-36 h-36 rounded-full bg-secondary/10 blur-2xl pointer-events-none"></div>
+<div class="relative z-10 flex flex-col gap-space-md">
+<!-- Card Top: Identity & Pulse -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined text-[24px]">terminal</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface tracking-tight">Sync Daemon Core</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-mono">v3.4.12-release (arm64)</span>
+</div>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 shadow-sm">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+</span>
+<span class="font-label-sm text-label-sm font-semibold tracking-wide">HEALTHY</span>
+</div>
+</div>
+<!-- Live Parameter Pills -->
+<div class="grid grid-cols-3 gap-space-xs pt-1">
+<div class="flex flex-col p-2.5 rounded-xl bg-surface-container-low">
+<span class="font-label-sm text-label-sm text-outline">Daemon PID</span>
+<span class="font-label-md text-label-md text-on-surface font-mono font-bold mt-0.5">40912</span>
+</div>
+<div class="flex flex-col p-2.5 rounded-xl bg-surface-container-low">
+<span class="font-label-sm text-label-sm text-outline">RAM Usage</span>
+<span class="font-label-md text-label-md text-on-surface font-mono font-bold mt-0.5">48.2 MB</span>
+</div>
+<div class="flex flex-col p-2.5 rounded-xl bg-surface-container-low">
+<span class="font-label-sm text-label-sm text-outline">WebSocket</span>
+<span class="font-label-md text-label-md text-emerald-700 font-mono font-bold mt-0.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">bolt</span>Live
+          </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Telemetry Metrics Grid (3 sleek cards) -->
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between px-1">
+<span class="font-headline-sm text-headline-sm text-on-surface">Live Pipeline Telemetry</span>
+<span class="font-label-sm text-label-sm text-outline font-mono">Sampled 1s ago</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-space-sm">
+<!-- Metric 1: Sync Speed -->
+<div class="relative overflow-hidden rounded-2xl bg-surface-container-lowest p-space-md shadow-[0_8px_30px_rgba(0,0,0,0.03)] flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">speed</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider font-semibold">THROUGHPUT</span>
+</div>
+<div class="mt-3 flex flex-col">
+<div class="flex items-baseline gap-1.5">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface tracking-tight font-bold">24.8</span>
+<span class="font-label-md text-label-md text-on-surface-variant font-mono">Mbps</span>
+</div>
+<div class="flex items-center gap-1 mt-1 text-outline">
+<span class="material-symbols-outlined text-[15px] text-primary">trending_up</span>
+<span class="font-label-sm text-label-sm">Peak: <strong class="text-on-surface font-mono">38.1 Mbps</strong></span>
+</div>
+</div>
+<!-- Micro sparkline visualization -->
+<div class="mt-3 w-full h-5 flex items-end gap-1">
+<div class="flex-1 bg-primary/20 rounded-t-sm h-[35%]"></div>
+<div class="flex-1 bg-primary/25 rounded-t-sm h-[45%]"></div>
+<div class="flex-1 bg-primary/30 rounded-t-sm h-[60%]"></div>
+<div class="flex-1 bg-primary/40 rounded-t-sm h-[50%]"></div>
+<div class="flex-1 bg-primary/60 rounded-t-sm h-[85%]"></div>
+<div class="flex-1 bg-primary/80 rounded-t-sm h-[70%]"></div>
+<div class="flex-1 bg-primary rounded-t-sm h-[95%]"></div>
+</div>
+</div>
+<!-- Metric 2: Queued Tracks -->
+<div class="relative overflow-hidden rounded-2xl bg-surface-container-lowest p-space-md shadow-[0_8px_30px_rgba(0,0,0,0.03)] flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+<span class="material-symbols-outlined text-[18px]">done_all</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider font-semibold">INGEST QUEUE</span>
+</div>
+<div class="mt-3 flex flex-col">
+<div class="flex items-baseline gap-1.5">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface tracking-tight font-bold">0</span>
+<span class="font-label-md text-label-md text-on-surface-variant font-mono">tracks</span>
+</div>
+<div class="flex items-center gap-1 mt-1 text-emerald-700">
+<span class="material-symbols-outlined text-[15px]">check_circle</span>
+<span class="font-label-sm text-label-sm font-semibold">All Synced &amp; Verified</span>
+</div>
+</div>
+<div class="mt-3 w-full bg-emerald-100 rounded-full h-1.5 overflow-hidden">
+<div class="bg-emerald-500 h-full rounded-full w-full"></div>
+</div>
+</div>
+<!-- Metric 3: Navidrome Ping -->
+<div class="relative overflow-hidden rounded-2xl bg-surface-container-lowest p-space-md shadow-[0_8px_30px_rgba(0,0,0,0.03)] flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[18px]">dns</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider font-semibold">LATENCY</span>
+</div>
+<div class="mt-3 flex flex-col">
+<div class="flex items-baseline gap-1.5">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface tracking-tight font-bold">12</span>
+<span class="font-label-md text-label-md text-on-surface-variant font-mono">ms</span>
+</div>
+<div class="flex items-center gap-1 mt-1 text-outline">
+<span class="material-symbols-outlined text-[15px] text-secondary">verified</span>
+<span class="font-label-sm text-label-sm font-mono text-on-surface">Subsonic API OK</span>
+</div>
+</div>
+<div class="mt-3 flex items-center gap-1.5 text-secondary font-mono">
+<span class="font-label-sm text-label-sm text-outline">Round-trip jitter:</span>
+<span class="font-label-sm text-label-sm font-semibold text-secondary">±1.2ms</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Activity Console (macOS/iOS Developer Style) -->
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-space-xs">
+<span class="font-headline-sm text-headline-sm text-on-surface">Activity Stream</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest font-label-sm text-label-sm font-mono text-on-surface-variant">Live Session</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-outline font-mono">TTY: /dev/pts/2</span>
+</div>
+</div>
+<!-- The Studio Console Window Card -->
+<div class="rounded-2xl bg-surface-container-lowest shadow-[0_12px_36px_rgba(0,0,0,0.05)] overflow-hidden">
+<!-- Window Title Bar with Traffic Lights -->
+<div class="h-11 px-space-md bg-surface-container-low flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.02)]">
+<div class="flex items-center gap-2">
+<!-- Traffic light controls -->
+<button aria-label="Close window" class="w-3 h-3 rounded-full bg-rose-400 hover:opacity-80 active:scale-90 transition-transform flex items-center justify-center group">
+<span class="material-symbols-outlined text-[8px] text-rose-950 opacity-0 group-hover:opacity-100">close</span>
+</button>
+<button aria-label="Minimize window" class="w-3 h-3 rounded-full bg-amber-400 hover:opacity-80 active:scale-90 transition-transform flex items-center justify-center group">
+<span class="material-symbols-outlined text-[8px] text-amber-950 opacity-0 group-hover:opacity-100">remove</span>
+</button>
+<button aria-label="Expand window" class="w-3 h-3 rounded-full bg-emerald-400 hover:opacity-80 active:scale-90 transition-transform flex items-center justify-center group">
+<span class="material-symbols-outlined text-[8px] text-emerald-950 opacity-0 group-hover:opacity-100">fullscreen</span>
+</button>
+<span class="ml-2 font-label-sm text-label-sm text-on-surface-variant font-mono font-medium">tubesync-worker.service</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">tune</span>
+<span class="font-label-sm text-label-sm font-mono">Verbosity: DEBUG</span>
+</div>
+</div>
+</div>
+<!-- Monospace Activity Log Table -->
+<div class="p-space-md font-mono text-[12px] leading-relaxed flex flex-col gap-2.5 max-h-[320px] overflow-y-auto bg-surface-bright/70" id="console-scroll-container">
+<!-- Log Entry 1: INFO -->
+<div class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-container-low transition-colors">
+<span class="text-outline/70 font-mono text-[11px] select-none pt-0.5">14:22:04</span>
+<span class="px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-bold text-[10px] tracking-wide shrink-0">INFO</span>
+<div class="flex-1 min-w-0 text-on-surface text-[12px] break-all">
+            Using authentication cookies from <span class="bg-surface-container px-1.5 py-0.5 rounded text-primary font-semibold">/home/ubuntu/music/cookies.txt</span>
+</div>
+</div>
+<!-- Log Entry 2: FETCH -->
+<div class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-container-low transition-colors">
+<span class="text-outline/70 font-mono text-[11px] select-none pt-0.5">14:22:07</span>
+<span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold text-[10px] tracking-wide shrink-0">FETCH</span>
+<div class="flex-1 min-w-0 text-on-surface text-[12px]">
+            Syncing YouTube playlist stream <span class="text-secondary font-semibold font-mono">PL82_Ambient_Lossless</span> (Found 48 tracks)
+          </div>
+</div>
+<!-- Log Entry 3: ARCHIVE -->
+<div class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-container-low transition-colors">
+<span class="text-outline/70 font-mono text-[11px] select-none pt-0.5">14:22:11</span>
+<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] tracking-wide shrink-0">ARCHIVE</span>
+<div class="flex-1 min-w-0 text-on-surface text-[12px]">
+            Track recorded in archive: <span class="text-emerald-800 font-semibold">[ytdl:dQw4w9WgXcQ]</span> verified non-duplicate.
+          </div>
+</div>
+<!-- Log Entry 4: METADATA -->
+<div class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-container-low transition-colors">
+<span class="text-outline/70 font-mono text-[11px] select-none pt-0.5">14:22:14</span>
+<span class="px-2 py-0.5 rounded-full bg-fuchsia-100 text-fuchsia-800 font-bold text-[10px] tracking-wide shrink-0">METADATA</span>
+<div class="flex-1 min-w-0 text-on-surface text-[12px]">
+            Writing ID3v2.4 tags &amp; ultra-res front-cover embedded art (3000x3000px, 300 DPI)
+          </div>
+</div>
+<!-- Log Entry 5: AUDIO -->
+<div class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-container-low transition-colors">
+<span class="text-outline/70 font-mono text-[11px] select-none pt-0.5">14:22:18</span>
+<span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[10px] tracking-wide shrink-0">AUDIO</span>
+<div class="flex-1 min-w-0 text-on-surface text-[12px]">
+            Transcoding Opus 160kbps to <span class="bg-indigo-50 text-indigo-900 px-1 rounded font-semibold">320kbps MP3</span> (FFmpeg libmp3lame, VBR-0 pristine pass)
+          </div>
+</div>
+<!-- Log Entry 6: NAVIDROME -->
+<div class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-container-low transition-colors">
+<span class="text-outline/70 font-mono text-[11px] select-none pt-0.5">14:22:21</span>
+<span class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 font-bold text-[10px] tracking-wide shrink-0">NAVIDROME</span>
+<div class="flex-1 min-w-0 text-on-surface text-[12px]">
+<span class="text-teal-900 font-semibold font-mono">HTTP 200</span>: Library quick scan triggered successfully. 1 track cataloged.
+          </div>
+</div>
+</div>
+<!-- Console Footer Status Strip -->
+<div class="px-space-md py-2.5 bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-mono">Listening on port 8080 (socket alive)</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline font-mono">6 events logged</span>
+</div>
+</div>
+</div>
+<!-- Master Interactive Controls & Actions -->
+<div class="flex flex-col gap-space-sm pt-space-xs">
+<!-- Apple Music Saturated Primary Action Button -->
+<button class="w-full h-14 rounded-full bg-primary-container text-on-primary-container font-headline-sm text-headline-sm font-semibold flex items-center justify-center gap-space-xs shadow-[0_6px_20px_rgba(250,45,72,0.35)] active:scale-[0.98] transition-all hover:opacity-95" id="sync-trigger-btn">
+<span class="material-symbols-outlined text-[24px]" id="sync-icon">sync</span>
+<span id="sync-label">Run Manual Sync Cycle</span>
+</button>
+<!-- Secondary Utilities & Toggles Bar -->
+<div class="grid grid-cols-2 gap-space-sm">
+<!-- Download Full Log Button -->
+<button class="h-12 px-space-md rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-all shadow-sm">
+<span class="material-symbols-outlined text-[20px] text-outline">download</span>
+<span>Download Full Log</span>
+</button>
+<!-- Live Auto-Scroll Toggle Pill -->
+<label class="h-12 px-space-md rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold flex items-center justify-between cursor-pointer select-none shadow-sm transition-colors">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-outline">vertical_align_bottom</span>
+<span>Auto-Scroll</span>
+</div>
+<input checked="" class="sr-only peer" id="autoscroll-toggle" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-container-highest peer-checked:bg-primary rounded-full relative transition-colors">
+<div class="w-4 h-4 rounded-full bg-surface-container-lowest absolute top-0.5 left-0.5 peer-checked:translate-x-4 transition-transform shadow-sm"></div>
+</div>
+</label>
+</div>
+</div>
+<!-- Client-side Micro-Interactions Script -->
+<script>
+    (function initConsoleDelight() {
+      const btn = document.getElementById('sync-trigger-btn');
+      const icon = document.getElementById('sync-icon');
+      const label = document.getElementById('sync-label');
+      const container = document.getElementById('console-scroll-container');
+      const autoScroll = document.getElementById('autoscroll-toggle');
+
+      if (!btn || !container) return;
+
+      btn.addEventListener('click', () => {
+        if (btn.dataset.syncing === 'true') return;
+        btn.dataset.syncing = 'true';
+
+        icon.classList.add('animate-spin');
+        label.textContent = 'Syncing Playlists...';
+        btn.classList.add('opacity-90');
+
+        setTimeout(() => {
+          const now = new Date();
+          const timeStr = [now.getHours(), now.getMinutes(), now.getSeconds()]
+            .map(v => String(v).padStart(2, '0'))
+            .join(':');
+
+          const newLog = document.createElement('div');
+          newLog.className = 'flex items-start gap-2.5 p-2 rounded-xl hover:bg-surface-container-low transition-colors';
+          newLog.innerHTML = `
+            <span class="text-outline/70 font-mono text-[11px] select-none pt-0.5">${timeStr}</span>
+            <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-900 font-bold text-[10px] tracking-wide shrink-0">TRIGGER</span>
+            <div class="flex-1 min-w-0 text-on-surface text-[12px]">
+              Manual synchronization round finished. <strong class="text-emerald-800">0 updates pending.</strong>
+            </div>
+          `;
+          container.appendChild(newLog);
+
+          if (autoScroll && autoScroll.checked) {
+            container.scrollTop = container.scrollHeight;
+          }
+
+          icon.classList.remove('animate-spin');
+          label.textContent = 'Sync Cycle Complete';
+          
+          setTimeout(() => {
+            label.textContent = 'Run Manual Sync Cycle';
+            btn.dataset.syncing = 'false';
+            btn.classList.remove('opacity-90');
+          }, 2000);
+        }, 1400);
+      });
+    })();
+  </script>
+</div></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/80 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.04)]" data-active-classes="text-primary font-semibold"><div class="h-16 px-gutter flex items-center justify-around"><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="search" href="#"><span class="material-symbols-outlined text-[24px]">search</span><span class="font-label-sm text-label-sm">Search</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="library" href="#"><span class="material-symbols-outlined text-[24px]">library_music</span><span class="font-label-sm text-label-sm">Library</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="sources" href="#"><span class="material-symbols-outlined text-[24px]">podcasts</span><span class="font-label-sm text-label-sm">Sources</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="auth" href="#"><span class="material-symbols-outlined text-[24px]">key</span><span class="font-label-sm text-label-sm">Auth</span></a><a aria-current="page" class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] transition-colors text-primary font-semibold" data-path="console" href="#"><span class="material-symbols-outlined text-[24px]">terminal</span><span class="font-label-sm text-label-sm">Console</span></a></div></nav></body></html>
