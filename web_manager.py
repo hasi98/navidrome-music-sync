@@ -1917,63 +1917,101 @@ HTML_TEMPLATE = """
         // --- Audio Preview Player ---
         let activeAudio = null;
         let activeAudioPath = null;
+        let activeAudioIdx = null;
+        let activeAudioTitle = "";
+        let activeAudioArtist = "";
 
-        function toggleAudioPreview(path, title, artist) {
+        function toggleAudioPreviewByIdx(idx) {
+            const tr = allLibrarySongs[idx];
+            if (!tr) return;
+            toggleAudioPreview(tr.path, tr.title, tr.artist || 'Unknown Artist', idx);
+        }
+
+        function deleteTrackByIdx(idx) {
+            const tr = allLibrarySongs[idx];
+            if (!tr) return;
+            deleteTrack(tr.path, tr.title, idx);
+        }
+
+        function togglePlayPauseAudio() {
+            if (!activeAudio) return;
+            if (activeAudio.paused) {
+                activeAudio.play().then(() => {
+                    if (activeAudioIdx !== null) setPreviewIcon(activeAudioIdx, 'pause_circle');
+                    updateAudioPreviewDock(activeAudioTitle, activeAudioArtist, false);
+                }).catch(e => {
+                    console.warn("Play resume error:", e);
+                });
+            } else {
+                activeAudio.pause();
+                if (activeAudioIdx !== null) setPreviewIcon(activeAudioIdx, 'play_circle');
+                updateAudioPreviewDock(activeAudioTitle, activeAudioArtist, true);
+            }
+        }
+
+        function toggleAudioPreview(path, title, artist, idx) {
             if (activeAudioPath === path && activeAudio) {
-                if (activeAudio.paused) {
-                    activeAudio.play();
-                    setPreviewIcon(path, 'pause_circle');
-                    updateAudioPreviewDock(title, artist, false);
-                } else {
-                    activeAudio.pause();
-                    setPreviewIcon(path, 'play_circle');
-                    updateAudioPreviewDock(title, artist, true);
-                }
+                togglePlayPauseAudio();
                 return;
             }
 
             if (activeAudio) {
                 activeAudio.pause();
-                if (activeAudioPath) setPreviewIcon(activeAudioPath, 'play_circle');
+                if (activeAudioIdx !== null) setPreviewIcon(activeAudioIdx, 'play_circle');
                 activeAudio = null;
             }
 
             activeAudioPath = path;
-            activeAudio = new Audio(`/api/library/stream?path=${encodeURIComponent(path)}`);
-            setPreviewIcon(path, 'pause_circle');
+            activeAudioIdx = idx;
+            activeAudioTitle = title;
+            activeAudioArtist = artist;
+
+            const streamUrl = `/api/library/stream?path=${encodeURIComponent(path)}`;
+            activeAudio = new Audio(streamUrl);
+            activeAudio.preload = "auto";
+            setPreviewIcon(idx, 'pause_circle');
             updateAudioPreviewDock(title, artist, false);
 
             activeAudio.ontimeupdate = () => {
                 if (!activeAudio || activeDownloadingId) return;
-                const pct = (activeAudio.currentTime / (activeAudio.duration || 1)) * 100;
-                const curMin = Math.floor(activeAudio.currentTime / 60);
-                const curSec = Math.floor(activeAudio.currentTime % 60).toString().padStart(2, '0');
-                const durMin = Math.floor((activeAudio.duration || 0) / 60);
-                const durSec = Math.floor((activeAudio.duration || 0) % 60).toString().padStart(2, '0');
+                const dur = activeAudio.duration || 0;
+                const cur = activeAudio.currentTime || 0;
+                const pct = dur > 0 ? (cur / dur) * 100 : 0;
+                const curMin = Math.floor(cur / 60);
+                const curSec = Math.floor(cur % 60).toString().padStart(2, '0');
+                const durMin = Math.floor(dur / 60);
+                const durSec = Math.floor(dur % 60).toString().padStart(2, '0');
                 const timeStr = `${curMin}:${curSec} / ${durMin}:${durSec}`;
 
                 const progress = document.getElementById('dockProgressBar');
                 const speed = document.getElementById('dockSpeed');
                 if (progress) progress.style.width = `${pct}%`;
-                if (speed) speed.innerText = timeStr;
+                if (speed && dur > 0) speed.innerText = timeStr;
             };
 
             activeAudio.onended = () => {
                 stopAudioPreview();
             };
 
-            activeAudio.onerror = () => {
+            activeAudio.onerror = (e) => {
+                console.error("Audio stream error:", e, activeAudio ? activeAudio.error : null);
                 showToast('Audio preview stream failed', true);
                 stopAudioPreview();
             };
 
-            activeAudio.play().catch(e => {
-                console.warn("Audio playback blocked:", e);
+            activeAudio.play().catch(err => {
+                console.warn("Audio play blocked by browser:", err);
+                if (err.name === 'NotAllowedError') {
+                    showToast('Tap to allow audio playback', false);
+                } else {
+                    showToast('Playback error: ' + err.message, true);
+                }
+                stopAudioPreview();
             });
         }
 
-        function setPreviewIcon(path, iconName) {
-            const btn = document.getElementById(`preview-btn-${path}`);
+        function setPreviewIcon(idx, iconName) {
+            const btn = document.getElementById(`preview-btn-${idx}`);
             if (btn) btn.innerHTML = `<span class="material-symbols-outlined text-[22px]">${iconName}</span>`;
         }
 
@@ -2005,7 +2043,7 @@ HTML_TEMPLATE = """
             }
 
             actionWrap.innerHTML = `
-                <button onclick="toggleAudioPreview('${escapeHtml(activeAudioPath)}', '${escapeHtml(title)}', '${escapeHtml(artist)}')"
+                <button onclick="togglePlayPauseAudio()"
                     class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center active:scale-95 transition" title="${isPaused ? 'Resume' : 'Pause'}">
                     <span class="material-symbols-outlined text-[18px]">${isPaused ? 'play_arrow' : 'pause'}</span>
                 </button>
@@ -2020,10 +2058,11 @@ HTML_TEMPLATE = """
                 activeAudio.pause();
                 activeAudio = null;
             }
-            if (activeAudioPath) {
-                setPreviewIcon(activeAudioPath, 'play_circle');
-                activeAudioPath = null;
+            if (activeAudioIdx !== null) {
+                setPreviewIcon(activeAudioIdx, 'play_circle');
+                activeAudioIdx = null;
             }
+            activeAudioPath = null;
             if (!activeDownloadingId) {
                 hideDownloadDock();
             }
@@ -2040,15 +2079,18 @@ HTML_TEMPLATE = """
                 return;
             }
 
-            list.innerHTML = tracks.map(tr => `
-                <div class="p-3 rounded-2xl bg-surface-container-lowest shadow-sm border border-surface-container-high/60 flex items-center justify-between gap-3 hover:border-surface-container-highest transition" id="lib-row-${escapeHtml(tr.path)}">
+            list.innerHTML = tracks.map((tr) => {
+                const idx = allLibrarySongs.indexOf(tr);
+                const isThisPlaying = activeAudioPath === tr.path && activeAudio && !activeAudio.paused;
+                return `
+                <div class="p-3 rounded-2xl bg-surface-container-lowest shadow-sm border border-surface-container-high/60 flex items-center justify-between gap-3 hover:border-surface-container-highest transition" id="lib-row-${idx}">
                     <!-- Checkbox (Visible in Selection Mode) -->
                     <input type="checkbox" data-path="${escapeHtml(tr.path)}"
                         onchange="updateBatchCount()"
                         class="lib-select-check ${isSelectionMode ? '' : 'hidden'} rounded border-outline/40 text-primary focus:ring-0 w-4 h-4 shrink-0">
 
                     <!-- Thumbnail / Play trigger -->
-                    <div onclick="toggleAudioPreview('${escapeHtml(tr.path)}', '${escapeHtml(tr.title)}', '${escapeHtml(tr.artist || 'Unknown Artist')}')"
+                    <div onclick="toggleAudioPreviewByIdx(${idx})"
                         class="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-surface-container shadow-sm flex items-center justify-center text-primary cursor-pointer group">
                         <span class="material-symbols-outlined text-[20px] group-hover:scale-110 transition">music_note</span>
                         <div class="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -2067,55 +2109,63 @@ HTML_TEMPLATE = """
 
                     <!-- Actions -->
                     <div class="shrink-0 flex items-center gap-1">
-                        <button id="preview-btn-${escapeHtml(tr.path)}"
-                            onclick="toggleAudioPreview('${escapeHtml(tr.path)}', '${escapeHtml(tr.title)}', '${escapeHtml(tr.artist || 'Unknown Artist')}')"
+                        <button id="preview-btn-${idx}"
+                            onclick="toggleAudioPreviewByIdx(${idx})"
                             class="w-8 h-8 rounded-full flex items-center justify-center text-primary hover:bg-surface-container transition active:scale-95" title="Preview Audio">
-                            <span class="material-symbols-outlined text-[22px]">play_circle</span>
+                            <span class="material-symbols-outlined text-[22px]">${isThisPlaying ? 'pause_circle' : 'play_circle'}</span>
                         </button>
-                        <button onclick="deleteTrack('${escapeHtml(tr.path)}', '${escapeHtml(tr.title)}')"
+                        <button onclick="deleteTrackByIdx(${idx})"
                             class="w-8 h-8 rounded-full flex items-center justify-center text-outline hover:text-error hover:bg-surface-container transition active:scale-95" title="Delete Song">
                             <span class="material-symbols-outlined text-[18px]">delete</span>
                         </button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
             updateBatchCount();
         }
 
         function toggleSelectAllMode() {
             isSelectionMode = !isSelectionMode;
             const bar = document.getElementById('batchActionBar');
-            const btnText = document.getElementById('selectionModeText');
+            const checks = document.querySelectorAll('.lib-select-check');
+            const modeText = document.getElementById('selectionModeText');
+            const modeBtn = document.getElementById('selectionModeBtn');
+
             if (isSelectionMode) {
                 bar.classList.remove('hidden');
-                btnText.innerText = 'Cancel';
+                checks.forEach(c => c.classList.remove('hidden'));
+                modeText.innerText = "Cancel";
+                modeBtn.classList.add('bg-primary', 'text-on-primary');
             } else {
                 bar.classList.add('hidden');
-                btnText.innerText = 'Select';
-                document.querySelectorAll('.lib-select-check').forEach(cb => cb.checked = false);
+                checks.forEach(c => {
+                    c.classList.add('hidden');
+                    c.checked = false;
+                });
+                const selAll = document.getElementById('selectAllCheckbox');
+                if (selAll) selAll.checked = false;
+                modeText.innerText = "Select";
+                modeBtn.classList.remove('bg-primary', 'text-on-primary');
             }
-            document.querySelectorAll('.lib-select-check').forEach(cb => {
-                if (isSelectionMode) cb.classList.remove('hidden');
-                else cb.classList.add('hidden');
-            });
             updateBatchCount();
         }
 
         function toggleSelectAll(checked) {
-            document.querySelectorAll('.lib-select-check').forEach(cb => cb.checked = checked);
+            const checks = document.querySelectorAll('.lib-select-check');
+            checks.forEach(c => c.checked = checked);
             updateBatchCount();
         }
 
         function updateBatchCount() {
-            const selected = document.querySelectorAll('.lib-select-check:checked');
-            const count = selected.length;
-            const countText = document.getElementById('selectedCountText');
-            const deleteBtn = document.getElementById('batchDeleteBtn');
-            if (countText) countText.innerText = `${count} selected`;
-            if (deleteBtn) deleteBtn.disabled = (count === 0);
+            const checks = Array.from(document.querySelectorAll('.lib-select-check:checked'));
+            const text = document.getElementById('selectedCountText');
+            const btn = document.getElementById('batchDeleteBtn');
+            if (text) text.innerText = `${checks.length} selected`;
+            if (btn) btn.disabled = (checks.length === 0);
         }
 
-        async function deleteTrack(path, title) {
+        async function deleteTrack(path, title, idx) {
             if (!confirm(`Delete "${title}" from server?`)) return;
             try {
                 const formData = new FormData();
@@ -2123,14 +2173,17 @@ HTML_TEMPLATE = """
                 formData.append('track_path', path);
                 const res = await fetch('/api/library/delete', { method: 'POST', body: formData });
                 const data = await res.json();
-                if (data.status === 'deleted') {
-                    showToast(`Deleted: ${title}`);
+                if (data.status === 'ok' || data.status === 'deleted' || data.deleted) {
+                    showToast(`✓ Deleted: ${title}`);
+                    if (activeAudioPath === path) {
+                        stopAudioPreview();
+                    }
                     fetchLibrary();
                 } else {
                     showToast(data.error || "Failed to delete", true);
                 }
             } catch (e) {
-                showToast("Delete failed", true);
+                showToast("Delete failed: " + e.message, true);
             }
         }
 
@@ -2147,11 +2200,18 @@ HTML_TEMPLATE = """
                     body: JSON.stringify({ paths: paths })
                 });
                 const data = await res.json();
-                showToast(`Deleted ${data.deleted_count} tracks!`);
-                toggleSelectAllMode();
-                fetchLibrary();
+                if (data.status === 'ok' || data.deleted_count !== undefined) {
+                    showToast(`✓ Deleted ${data.deleted_count || paths.length} tracks!`);
+                    if (paths.includes(activeAudioPath)) {
+                        stopAudioPreview();
+                    }
+                    toggleSelectAllMode();
+                    fetchLibrary();
+                } else {
+                    showToast(data.error || "Batch delete failed", true);
+                }
             } catch (e) {
-                showToast("Batch delete failed", true);
+                showToast("Batch delete failed: " + e.message, true);
             }
         }
 
@@ -2406,14 +2466,15 @@ def api_library():
 def api_library_delete():
     rel_path = request.form.get("path") or request.form.get("track_path") or (request.json and (request.json.get("path") or request.json.get("track_path")))
     if not rel_path:
-        return jsonify({"error": "No path provided"}), 400
+        return jsonify({"error": "No path provided", "status": "error"}), 400
     
-    full_path = os.path.realpath(os.path.join(LIBRARY_DIR, rel_path))
+    clean_rel = rel_path.strip().lstrip("/").lstrip("\\")
+    full_path = os.path.realpath(os.path.join(LIBRARY_DIR, clean_rel))
     if not full_path.startswith(os.path.realpath(LIBRARY_DIR)):
-        return jsonify({"error": "Access denied"}), 403
+        return jsonify({"error": "Access denied", "status": "error"}), 403
     
     if not os.path.exists(full_path):
-        return jsonify({"error": "File does not exist"}), 404
+        return jsonify({"error": "File does not exist", "status": "error"}), 404
         
     try:
         os.remove(full_path)
@@ -2425,9 +2486,9 @@ def api_library_delete():
                 parent = os.path.dirname(parent)
             else:
                 break
-        return jsonify({"status": "ok", "deleted": rel_path})
+        return jsonify({"status": "ok", "deleted": True, "path": clean_rel})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "status": "error"}), 500
 
 @app.route("/api/library/delete_batch", methods=["POST"])
 def api_library_delete_batch():
@@ -2489,12 +2550,18 @@ def api_library_rescan():
 @app.route("/api/library/stream")
 def api_library_stream():
     rel_path = request.args.get("path", "")
-    full_path = os.path.realpath(os.path.join(LIBRARY_DIR, rel_path))
+    if not rel_path:
+        return "Missing path", 400
+    clean_rel = rel_path.strip().lstrip("/").lstrip("\\")
+    full_path = os.path.realpath(os.path.join(LIBRARY_DIR, clean_rel))
     if not full_path.startswith(os.path.realpath(LIBRARY_DIR)) or not os.path.isfile(full_path):
         return "File not found", 404
     dir_name = os.path.dirname(full_path)
     file_name = os.path.basename(full_path)
-    return send_from_directory(dir_name, file_name, mimetype="audio/mpeg")
+    import mimetypes
+    guessed, _ = mimetypes.guess_type(file_name)
+    mime = guessed or "audio/mpeg"
+    return send_from_directory(dir_name, file_name, mimetype=mime, conditional=True)
 
 @app.route("/api/logs")
 def api_logs():
