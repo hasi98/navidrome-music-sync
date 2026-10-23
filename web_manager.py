@@ -11,12 +11,55 @@ from flask import Flask, render_template_string, request, redirect, url_for, jso
 app = Flask(__name__)
 app.secret_key = "music_manager_secret_key"
 
-MUSIC_DIR = "/home/ubuntu/music"
+import shutil
+
+# Base directory: auto-detect directory where web_manager.py is installed, or use MUSIC_DIR env var
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+MUSIC_DIR = os.environ.get("MUSIC_DIR", SCRIPT_DIR)
 LIBRARY_DIR = os.path.join(MUSIC_DIR, "library")
 PLAYLISTS_FILE = os.path.join(MUSIC_DIR, "playlists.txt")
 SYNC_SCRIPT = os.path.join(MUSIC_DIR, "scripts", "sync.sh")
 LOG_FILE = os.path.join(MUSIC_DIR, "logs", "sync.log")
 COOKIES_FILE = os.path.join(MUSIC_DIR, "cookies.txt")
+
+# Self-healing: create missing directories and critical files automatically
+os.makedirs(LIBRARY_DIR, exist_ok=True)
+os.makedirs(os.path.join(MUSIC_DIR, "logs"), exist_ok=True)
+os.makedirs(os.path.join(MUSIC_DIR, "scripts"), exist_ok=True)
+
+if not os.path.exists(PLAYLISTS_FILE):
+    try:
+        with open(PLAYLISTS_FILE, "w", encoding="utf-8") as _f:
+            _f.write("# TubeSync Playlist URLs (one per line)\n")
+    except Exception:
+        pass
+
+if not os.path.exists(COOKIES_FILE):
+    try:
+        with open(COOKIES_FILE, "w", encoding="utf-8") as _f:
+            pass
+    except Exception:
+        pass
+
+# Dynamic yt-dlp discovery
+def resolve_ytdlp_bin():
+    custom = os.environ.get("YTDLP_BIN")
+    if custom and os.path.isfile(custom):
+        return custom
+    which_bin = shutil.which("yt-dlp")
+    if which_bin and os.path.isfile(which_bin):
+        return which_bin
+    for candidate in [
+        YTDLP_BIN,
+        "/usr/bin/yt-dlp",
+        os.path.join(SCRIPT_DIR, "venv", "bin", "yt-dlp"),
+        os.path.expanduser("~/.local/bin/yt-dlp")
+    ]:
+        if os.path.isfile(candidate):
+            return candidate
+    return "yt-dlp"
+
+YTDLP_BIN = resolve_ytdlp_bin()
 
 sync_lock = threading.Lock()
 download_lock = threading.Lock()
@@ -123,7 +166,7 @@ def run_single_download(url, title="", video_id="", queue_info=None):
             
             cmd = [
                 "nice", "-n", "19", "ionice", "-c", "3",
-                "/usr/local/bin/yt-dlp",
+                YTDLP_BIN,
                 *cookie_arg,
                 "--newline",
                 "--extract-audio",
@@ -510,7 +553,7 @@ def search_youtube(query, limit=40):
 
     # Fallback yt-dlp search
     try:
-        cmd = ["/usr/local/bin/yt-dlp", "--flat-playlist", "--dump-single-json", f"ytsearch{limit}:{query}"]
+        cmd = [YTDLP_BIN, "--flat-playlist", "--dump-single-json", f"ytsearch{limit}:{query}"]
         res = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
         if res.returncode == 0 and res.stdout:
             data = json.loads(res.stdout)
@@ -570,7 +613,7 @@ def inspect_playlist(url):
     if is_real_playlist or is_radio:
         limit = "30" if is_radio else "100"
         cmd = [
-            "/usr/local/bin/yt-dlp",
+            YTDLP_BIN,
             *cookie_arg,
             "--flat-playlist",
             "--playlist-end", limit,
@@ -588,7 +631,7 @@ def inspect_playlist(url):
         if (not res or res.returncode != 0 or not (res.stdout and res.stdout.strip())) and cookie_arg:
             try:
                 cmd_no_cookies = [
-                    "/usr/local/bin/yt-dlp",
+                    YTDLP_BIN,
                     "--flat-playlist",
                     "--playlist-end", limit,
                     "--dump-single-json",
@@ -936,7 +979,7 @@ HTML_TEMPLATE = """
                             </div>
                             <span class="text-xs font-semibold text-on-surface">Music Library Storage</span>
                         </div>
-                        <span class="text-[11px] text-on-surface-variant" id="libSubfolderInfo">/home/ubuntu/music/library</span>
+                        <span class="text-[11px] text-on-surface-variant" id="libSubfolderInfo">Library Storage</span>
                     </div>
 
                     <div class="w-full h-2 rounded-full bg-surface-container overflow-hidden p-[1px] mt-1">
@@ -1873,7 +1916,7 @@ HTML_TEMPLATE = """
                     countBadge.innerText = `${allLibrarySongs.length} track${allLibrarySongs.length === 1 ? '' : 's'}${displayStorage}`;
                 }
                 if (subInfo && data.storage_display) {
-                    subInfo.innerText = `${data.storage_display} in /home/ubuntu/music/library`;
+                    subInfo.innerText = `${data.storage_display} in ${data.library_dir || "library"}`;
                 }
                 renderLibraryList(allLibrarySongs);
             } catch (err) {
@@ -2459,7 +2502,8 @@ def api_library():
         "songs": songs,
         "tracks": songs,
         "total_count": len(songs),
-        "storage_display": storage_display
+        "storage_display": storage_display,
+        "library_dir": LIBRARY_DIR
     })
 
 @app.route("/api/library/delete", methods=["POST"])
@@ -2575,6 +2619,10 @@ def api_status():
     with download_lock:
         dl_copy = dict(current_download)
         pq_copy = dict(playlist_queue)
+    has_ytdlp = bool(shutil.which("yt-dlp") or os.path.isfile(YTDLP_BIN))
+    has_ffmpeg = bool(shutil.which("ffmpeg") or os.path.isfile("/usr/bin/ffmpeg") or os.path.isfile("/usr/local/bin/ffmpeg"))
+    has_navidrome = os.path.isfile("/opt/navidrome/navidrome")
+
     return jsonify({
         "is_syncing": is_syncing,
         "current": dl_copy,
@@ -2582,7 +2630,12 @@ def api_status():
         "playlist_queue": pq_copy,
         "completed_ids": list(completed_download_ids),
         "playlists_count": len(get_playlists()),
-        "cookies_ok": has_cookies()
+        "cookies_ok": has_cookies(),
+        "health": {
+            "ytdlp": has_ytdlp,
+            "ffmpeg": has_ffmpeg,
+            "navidrome": has_navidrome
+        }
     })
 
 @app.route("/add", methods=["POST"])
