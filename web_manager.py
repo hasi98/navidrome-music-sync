@@ -1853,22 +1853,33 @@ HTML_TEMPLATE = """
         async function fetchLibrary() {
             const list = document.getElementById('libraryTracksList');
             const countBadge = document.getElementById('libTotalTracksBadge');
-            list.innerHTML = `
-                <div class="p-8 text-center text-outline text-xs">
-                    <span class="material-symbols-outlined text-primary text-2xl animate-spin mb-2 block">autorenew</span>
-                    Reading library files...
-                </div>
-            `;
+            const subInfo = document.getElementById('libSubfolderInfo');
+            if (list) {
+                list.innerHTML = `
+                    <div class="p-8 text-center text-outline text-xs">
+                        <span class="material-symbols-outlined text-primary text-2xl animate-spin mb-2 block">autorenew</span>
+                        Reading library files...
+                    </div>
+                `;
+            }
 
             try {
                 const res = await fetch('/api/library');
                 const data = await res.json();
-                allLibrarySongs = data.tracks || [];
+                allLibrarySongs = data.songs || data.tracks || [];
 
-                countBadge.innerText = `${allLibrarySongs.length} track${allLibrarySongs.length === 1 ? '' : 's'}`;
+                const displayStorage = data.storage_display ? ` (${data.storage_display})` : '';
+                if (countBadge) {
+                    countBadge.innerText = `${allLibrarySongs.length} track${allLibrarySongs.length === 1 ? '' : 's'}${displayStorage}`;
+                }
+                if (subInfo && data.storage_display) {
+                    subInfo.innerText = `${data.storage_display} in /home/ubuntu/music/library`;
+                }
                 renderLibraryList(allLibrarySongs);
             } catch (err) {
-                list.innerHTML = `<div class="p-8 text-center text-error text-xs">Failed to load library: ${err.message}</div>`;
+                if (list) {
+                    list.innerHTML = `<div class="p-8 text-center text-error text-xs">Failed to load library: ${err.message}</div>`;
+                }
             }
         }
 
@@ -2108,6 +2119,7 @@ HTML_TEMPLATE = """
             if (!confirm(`Delete "${title}" from server?`)) return;
             try {
                 const formData = new FormData();
+                formData.append('path', path);
                 formData.append('track_path', path);
                 const res = await fetch('/api/library/delete', { method: 'POST', body: formData });
                 const data = await res.json();
@@ -2293,6 +2305,9 @@ HTML_TEMPLATE = """
                 }
             }).catch(() => {});
         }, 1800);
+
+        // Preload library on initial load
+        fetchLibrary();
     </script>
 </body>
 </html>
@@ -2382,13 +2397,14 @@ def api_library():
     storage_display = f"{total_gb} GB" if total_gb >= 1.0 else f"{total_mb} MB"
     return jsonify({
         "songs": songs,
+        "tracks": songs,
         "total_count": len(songs),
         "storage_display": storage_display
     })
 
 @app.route("/api/library/delete", methods=["POST"])
 def api_library_delete():
-    rel_path = request.form.get("path") or (request.json and request.json.get("path"))
+    rel_path = request.form.get("path") or request.form.get("track_path") or (request.json and (request.json.get("path") or request.json.get("track_path")))
     if not rel_path:
         return jsonify({"error": "No path provided"}), 400
     
